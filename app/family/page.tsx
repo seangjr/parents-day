@@ -1,5 +1,5 @@
-import { FamilyHome } from "@/components/family/family-home";
+import { ChooseFamily } from "@/components/family/choose-family";
 
 export default function FamilyPage() {
-  return <FamilyHome />;
+  return <ChooseFamily />;
 }

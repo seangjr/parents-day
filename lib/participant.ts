@@ -61,10 +61,20 @@ export interface ParticipantProfile {
   selfie: string | null;
 }
 
+/** The Family this device created or joined (ADR-0002): its Code + display Name. */
+export interface FamilyRef {
+  /** Server-minted, confusion-safe Family Code — the unique identifier. */
+  code: string;
+  /** Non-unique display Family Name, e.g. "The Tan Family". */
+  name: string;
+}
+
 /** Everything held for the one Participant on this device. */
 export interface ParticipantState extends ParticipantProfile {
   /** Client-generated anonymous id (ADR-0002). */
   id: string;
+  /** The Family joined in Step 1 of the wizard, or null before then. */
+  family: FamilyRef | null;
   /** Fixed-length answer slots; `null` = not yet answered. */
   answers: (QuizAnswer | null)[];
 }
@@ -76,10 +86,14 @@ export interface ParticipantStore {
   ready: boolean;
   /** First name and role are both set. */
   hasProfile: boolean;
+  /** A Family has been created or joined (Step 1 complete). */
+  hasFamily: boolean;
   answeredCount: number;
   /** All five answers, in order — or null until the quiz is complete. */
   completedAnswers: QuizAnswer[] | null;
   setProfile: (profile: ParticipantProfile) => void;
+  /** Remember (or clear) the Family created or joined in Step 1. */
+  setFamily: (family: FamilyRef | null) => void;
   setAnswer: (index: number, answer: QuizAnswer) => void;
   /** Retake: clear answers, keep the same id + profile (idempotent). */
   retake: () => void;
@@ -101,7 +115,7 @@ function newId(): string {
 
 /** Deterministic default used for the server render (no id, not hydrated). */
 function freshState(): ParticipantState {
-  return { id: "", firstName: "", role: null, selfie: null, answers: emptyAnswers() };
+  return { id: "", firstName: "", role: null, selfie: null, family: null, answers: emptyAnswers() };
 }
 
 function isQuizAnswer(value: unknown): value is QuizAnswer {
@@ -112,6 +126,16 @@ function isQuizAnswer(value: unknown): value is QuizAnswer {
     value === "D" ||
     value === "E"
   );
+}
+
+/** Coerce a persisted family blob into a FamilyRef, or null. */
+function coerceFamily(raw: unknown): FamilyRef | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.code !== "string" || typeof value.name !== "string") return null;
+  const code = value.code.trim();
+  const name = value.name.trim();
+  return code && name ? { code, name } : null;
 }
 
 /** Defensively coerce a persisted blob into a valid ParticipantState. */
@@ -125,6 +149,7 @@ function coerce(raw: unknown): ParticipantState | null {
       ? (value.role as Role)
       : null;
   const selfie = typeof value.selfie === "string" ? value.selfie : null;
+  const family = coerceFamily(value.family);
   const answers = emptyAnswers();
   if (Array.isArray(value.answers)) {
     for (let i = 0; i < QUESTION_COUNT; i++) {
@@ -132,7 +157,7 @@ function coerce(raw: unknown): ParticipantState | null {
       answers[i] = isQuizAnswer(a) ? a : null;
     }
   }
-  return { id, firstName, role, selfie, answers };
+  return { id, firstName, role, selfie, family, answers };
 }
 
 function load(): ParticipantState {
@@ -179,6 +204,10 @@ export function ParticipantProvider({ children }: { children: ReactNode }) {
     setParticipant((s) => ({ ...s, ...profile }));
   }, []);
 
+  const setFamily = useCallback((family: FamilyRef | null) => {
+    setParticipant((s) => ({ ...s, family }));
+  }, []);
+
   const setAnswer = useCallback((index: number, answer: QuizAnswer) => {
     setParticipant((s) => {
       if (index < 0 || index >= QUESTION_COUNT) return s;
@@ -205,15 +234,17 @@ export function ParticipantProvider({ children }: { children: ReactNode }) {
       ready,
       hasProfile:
         participant.firstName.trim() !== "" && participant.role !== null,
+      hasFamily: participant.family !== null,
       answeredCount: answered.length,
       completedAnswers:
         answered.length === QUESTION_COUNT ? answered : null,
       setProfile,
+      setFamily,
       setAnswer,
       retake,
       reset,
     };
-  }, [participant, ready, setProfile, setAnswer, retake, reset]);
+  }, [participant, ready, setProfile, setFamily, setAnswer, retake, reset]);
 
   return createElement(ParticipantContext.Provider, { value: store }, children);
 }

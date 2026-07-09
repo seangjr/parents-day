@@ -1,40 +1,39 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   Button,
   BUTTON_BASE,
   BUTTON_VARIANTS,
+  ButtonContent,
 } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { TransitionLink } from "@/components/transition";
 import { useParticipant } from "@/lib/participant";
+import { WizardStep } from "@/components/quiz/wizard-step";
 import { CodeDisplay } from "./code-display";
-import { JoinQr } from "./join-qr";
-import { useMyFamily } from "./use-my-family";
 import type { CreateResponse } from "./types";
 
 /**
- * Create-a-Family screen: name → server-minted Family Code + a join-QR. The
- * creator is added as the first member (ADR-0002), then handed the code and QR
- * to share so the rest of the family can join across their own phones.
+ * Step 1 of 4 — Create Family (Figma Mobile 3). A family surname mints a server
+ * Family Code; the creator joins as the first member (ADR-0002) and the Family
+ * is written to the participant store so every later step and the Submission
+ * carry it. The code is shown to share, then Continue advances to Step 2.
  */
 export function CreateFamily() {
-  const { participant, ready } = useParticipant();
-  const { setCode: rememberFamily } = useMyFamily();
+  const { participant, ready, setFamily } = useParticipant();
 
-  const [name, setName] = useState("");
+  const [surname, setSurname] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
 
-  const trimmed = name.trim();
+  const trimmed = surname.trim();
+  const displayName = trimmed ? `The ${trimmed} Family` : "";
   const nameValid = trimmed.length > 0;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleCreate() {
     if (!nameValid || busy || !ready || !participant.id) return;
     setBusy(true);
     setError(null);
@@ -42,94 +41,86 @@ export function CreateFamily() {
       const res = await fetch("/api/family/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ name: displayName }),
       });
       if (!res.ok) throw new Error("create failed");
-      const { code } = (await res.json()) as CreateResponse;
-      // The creator joins their own family as the first member.
+      const created = (await res.json()) as CreateResponse;
+      // The creator joins their own family as the first member (ADR-0002).
       await fetch("/api/family/join", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, participantId: participant.id }),
+        body: JSON.stringify({
+          code: created.code,
+          participantId: participant.id,
+        }),
       });
-      rememberFamily(code);
-      setCreated(code);
+      setFamily({ code: created.code, name: displayName });
+      setCode(created.code);
     } catch {
       setError("We couldn't create your family just now. Please try again.");
+    } finally {
       setBusy(false);
     }
   }
 
-  if (created) {
-    return (
-      <div className="flex flex-1 flex-col gap-8 py-4">
-        <header className="flex flex-col items-center gap-3 text-center">
-          <span className="font-condensed text-sm font-bold uppercase tracking-[0.3em] text-lime">
-            Family created
-          </span>
-          <h1 className="font-condensed text-3xl font-bold uppercase tracking-wide text-cream">
-            {trimmed}
-          </h1>
-          <p className="text-sage">
-            Share this Family Code — or the QR — so the rest of your family can
-            join.
+  return (
+    <div className="flex flex-1 flex-col gap-8">
+      <WizardStep step={1} label="Create family" />
+
+      <Field
+        label="Family last name"
+        placeholder="e.g. Tan"
+        value={surname}
+        onChange={(event) => setSurname(event.target.value)}
+        hint={
+          code
+            ? undefined
+            : "We\u2019ll form \u201cThe \u2026 Family\u201d and mint a code to share."
+        }
+        error={error ?? undefined}
+        autoComplete="family-name"
+        enterKeyHint="done"
+        maxLength={40}
+        disabled={busy || code !== null}
+      />
+
+      {code ? (
+        <div className="flex flex-col items-center gap-5 rounded-card border border-lime/40 bg-lime/10 p-8 text-center shadow-glow backdrop-blur-sm">
+          <p className="font-condensed text-sm font-bold uppercase tracking-wide text-sage">
+            Your family code
           </p>
-        </header>
+          <CodeDisplay code={code} />
+          <p className="text-sm leading-relaxed text-sage">
+            Share this code with your family members so their results join the
+            same cluster.
+          </p>
+        </div>
+      ) : null}
 
-        <CodeDisplay code={created} />
-        <JoinQr code={created} />
-
-        <div className="mt-auto flex flex-col gap-3">
+      <div className="mt-auto flex flex-col gap-4">
+        {code ? (
           <TransitionLink
-            href={`/family/${created}`}
+            href="/profile"
             className={cn(BUTTON_BASE, BUTTON_VARIANTS.primary, "w-full")}
           >
-            View our Love Mix
+            <ButtonContent>Continue</ButtonContent>
           </TransitionLink>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-1 flex-col gap-8 py-4">
-      <header className="flex flex-col gap-3">
-        <SectionHeading number={1} title="Start a family" />
-        <p className="text-sage">
-          Give your family a name. We&rsquo;ll mint a short Family Code the
-          others can use to join you.
-        </p>
-      </header>
-
-      <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6" noValidate>
-        <Field
-          label="Family name"
-          placeholder="e.g. The Tan Family"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          hint="Shown on your phones and the big screen. It doesn&rsquo;t have to be unique."
-          error={error ?? undefined}
-          autoComplete="off"
-          enterKeyHint="done"
-          maxLength={40}
-        />
-
-        <div className="mt-auto flex flex-col gap-3">
+        ) : (
           <Button
-            type="submit"
+            onClick={handleCreate}
             className="w-full"
             disabled={!nameValid || busy || !ready}
           >
             {busy ? "Creating\u2026" : "Create family"}
           </Button>
-          <TransitionLink
-            href="/family/join"
-            className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, "w-full")}
-          >
-            I have a code instead
-          </TransitionLink>
-        </div>
-      </form>
+        )}
+        <TransitionLink
+          href="/family/join"
+          className="mx-auto rounded-xs text-sm text-lime transition-colors duration-300 ease-smooth hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
+        >
+          I already have a code
+        </TransitionLink>
+      </div>
     </div>
   );
 }
