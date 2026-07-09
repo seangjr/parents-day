@@ -15,6 +15,11 @@ const condensedFont = Big_Shoulders({
   subsets: ["latin"],
   variable: "--font-big-shoulders",
   display: "swap",
+  // Pin the fallback: next/font can't derive override metrics for the
+  // "Big Shoulders" family, which emits a build warning. We supply an explicit
+  // fallback stack and skip the automatic size-adjust instead.
+  adjustFontFallback: false,
+  fallback: ["Arial Narrow", "sans-serif"],
 });
 
 const bodyFont = Geist({

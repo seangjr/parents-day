@@ -79,3 +79,36 @@ body {
   background-color: var(--color-lime);
   color: var(--color-shadow);
 }
+
+/* ----------------------------------------------------------------------------
+   Animation support — Osmo Masked Text Reveal + Number Odometer
+---------------------------------------------------------------------------- */
+/* FOUC guard: sans headings stay hidden until SplitReveal reveals them (it
+   always sets visibility, animating or — under reduced motion — snapping). */
+[data-split] {
+  visibility: hidden;
+}
+
+/* Number Odometer — each digit is a masked viewport over a stacked 0–9 track
+   translated on the Y axis (see components/animation/odometer.tsx). */
+[data-odometer] {
+  display: inline-flex;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.odometer-digit {
+  display: block;
+  height: 1em;
+  overflow: hidden;
+}
+.odometer-track {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+.odometer-number {
+  display: block;
+  height: 1em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
