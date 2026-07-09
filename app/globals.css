@@ -1,0 +1,81 @@
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+/* ----------------------------------------------------------------------------
+   Osmo Scaling System — https://osmo.supply/
+   Adapted for a rem-based utility framework: --size-font is applied to :root
+   (not body) so every rem-based Tailwind utility scales fluidly. Core math
+   is unchanged from the Osmo resource.
+---------------------------------------------------------------------------- */
+:root {
+  --size-unit: 16;              /* body font-size in design — no px */
+  --size-container-ideal: 1440; /* screen-size in design — no px */
+  --size-container-min: 992px;
+  --size-container-max: 1920px;
+  --size-container: clamp(var(--size-container-min), 100vw, var(--size-container-max));
+  --size-font: calc(var(--size-container) / (var(--size-container-ideal) / var(--size-unit)));
+}
+@media screen and (max-width: 991px) {
+  :root { --size-container-ideal: 834; --size-container-min: 768px; --size-container-max: 991px; }
+}
+@media screen and (max-width: 767px) {
+  :root { --size-container-ideal: 550; --size-container-min: 480px; --size-container-max: 767px; }
+}
+@media screen and (max-width: 479px) {
+  :root { --size-container-ideal: 390; --size-container-min: 320px; --size-container-max: 479px; }
+}
+:root { font-size: var(--size-font); }
+
+/* ----------------------------------------------------------------------------
+   Design tokens
+---------------------------------------------------------------------------- */
+@theme {
+  /* Core palette */
+  --color-olive-black: #10150f;
+  --color-shadow: #050705;
+  --color-moss: #3e4b2f;
+  --color-olive: #68734c;
+  --color-sage: #a8ad82;
+  --color-lime: #f0f4a6;
+  --color-cream: #f7f1c8;
+  --color-beige: #d2b48c;
+  --color-peach: #ffdab9;
+
+  /* Type families — bound to next/font variables in layout.tsx */
+  --font-display: var(--font-oooh-baby);
+  --font-condensed: var(--font-big-shoulders);
+  --font-body: var(--font-geist);
+
+  /* Radii — rem so they ride the scaling system */
+  --radius-xs: 0.25rem;   /* 4px  — buttons, inputs */
+  --radius-card: 1.25rem; /* 20px — quiz + reveal cards */
+
+  /* Signature easing (user-supplied) */
+  --ease-smooth: linear(0, 0.002 2%, 0.0047 4%, 0.0082 6%, 0.0128 8%, 0.0184 10%, 0.0254 12%, 0.0338 14%, 0.044 16%, 0.0564 18%, 0.0714 20%, 0.0897 22%, 0.1125 24%, 0.1413 26%, 0.1789 28%, 0.2299 30%, 0.3033 32%, 0.4081 34%, 0.522 36%, 0.61 38%, 0.6737 40%, 0.722 42%, 0.7604 44%, 0.7918 46%, 0.8183 48%, 0.8409 50%, 0.8605 52%, 0.8776 54%, 0.8926 56%, 0.9059 58%, 0.9178 60%, 0.9284 62%, 0.9378 64%, 0.9462 66%, 0.9538 68%, 0.9605 70%, 0.9665 72%, 0.9719 74%, 0.9766 76%, 0.9809 78%, 0.9845 80%, 0.9878 82%, 0.9905 84%, 0.9929 86%, 0.9949 88%, 0.9965 90%, 0.9978 92%, 0.9988 94%, 0.9995 96%, 0.9999 98%, 1);
+
+  /* Effects */
+  --shadow-glow: 0 0 1.25rem rgb(240 244 166 / 0.2);
+
+  /* Motion */
+  --animate-rise: rise 0.6s var(--ease-smooth) both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(1rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----------------------------------------------------------------------------
+   Base
+---------------------------------------------------------------------------- */
+body {
+  background-color: var(--color-olive-black);
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: var(--color-lime);
+  color: var(--color-shadow);
+}
