@@ -79,3 +79,49 @@ body {
   background-color: var(--color-lime);
   color: var(--color-shadow);
 }
+
+/* ----------------------------------------------------------------------------
+   Page transition — Osmo "Draw SVG" overlay (components/transition/)
+   The overlay is drawn imperatively by GSAP. The route swap runs inside a
+   View Transition purely for atomic DOM-commit timing, so the browser's default
+   root cross-fade is suppressed below — the opaque overlay is the only visible
+   transition. Recolor the wipe via `.transition__shape { color }` (brand lime).
+---------------------------------------------------------------------------- */
+.transition {
+  z-index: 9999; /* above any app chrome (sticky nav / modals) during the live cover+reveal */
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  overflow: clip;
+  /* Isolate the overlay's stroke repaints from the page — cheaper on mobile GPUs. */
+  contain: layout paint;
+}
+
+.transition__shape {
+  color: var(--color-lime);
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.transition__svg {
+  width: 130%;
+  height: 130%;
+  position: absolute;
+  top: -15%;
+  left: -15%;
+}
+
+/* Reduced motion swaps instantly (no cover/reveal), so the overlay never shows. */
+@media (prefers-reduced-motion: reduce) {
+  .transition { display: none; }
+}
+
+/* The View Transition is only a commit-timing primitive here; GSAP does the
+   visible work, so kill the default root cross-fade to avoid a double animation. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}

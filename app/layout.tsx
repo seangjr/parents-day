@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Oooh_Baby, Big_Shoulders, Geist } from "next/font/google";
 import "./globals.css";
 import { LenisProvider } from "./lenis-provider";
+import { TransitionProvider } from "@/components/transition";
 
 const displayFont = Oooh_Baby({
   weight: "400",
@@ -38,7 +39,9 @@ export default function RootLayout({
       className={`${displayFont.variable} ${condensedFont.variable} ${bodyFont.variable} antialiased`}
     >
       <body className="min-h-dvh">
-        <LenisProvider>{children}</LenisProvider>
+        <LenisProvider>
+          <TransitionProvider>{children}</TransitionProvider>
+        </LenisProvider>
       </body>
     </html>
   );
