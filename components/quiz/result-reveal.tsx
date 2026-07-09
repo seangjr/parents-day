@@ -15,6 +15,7 @@ import { Pill } from "@/components/ui/pill";
 import { FitText } from "@/components/fit-text";
 import { TransitionLink, useTransitionRouter } from "@/components/transition";
 import { useParticipant } from "@/lib/participant";
+import { submitResult } from "@/lib/submit-client";
 import { RESULT_COPY, ROJAK_COPY } from "@/lib/result-copy";
 
 /**
@@ -54,10 +55,19 @@ export function ResultReveal() {
   const copy = result.isRojak ? ROJAK_COPY : RESULT_COPY[result.primary];
 
   function handleSend() {
-    // Client-first: the result is already shown from on-device scoring. Recording
-    // the Submission to the server (best-effort POST + retry) and the live LED
-    // reveal land in S06 / S07 — acknowledge locally for now.
     setSent(true);
+    // Best-effort submit (ADR-0001): the result already shows on-device; this
+    // only feeds the LED reveal + community aggregates. Family linking is S05,
+    // so no familyCode here; the selfie Blob upload is a later slice, so no
+    // selfieUrl — the API keeps both optional for when those land.
+    if (participant.role) {
+      submitResult({
+        participantId: participant.id,
+        firstName: participant.firstName,
+        role: participant.role,
+        primary: primary.id,
+      });
+    }
   }
 
   function handleRetake() {
