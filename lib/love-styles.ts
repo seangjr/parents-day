@@ -104,3 +104,16 @@ export const LOVE_STYLE_LIST: LoveStyleMeta[] = LOVE_STYLE_ORDER.map(
 export function styleForAnswer(answer: string): LoveStyleMeta | undefined {
   return LOVE_STYLE_LIST.find((s) => s.answer === answer);
 }
+
+/**
+ * Which label to DISPLAY for a Participant's result across all screens + the LED.
+ * "malaysian" = the brand concept (brief / ADR-0003, e.g. "Lepak Love").
+ * "descriptor" = the Figma screens' English wording (e.g. "Quality Time").
+ * Single switch — flip this one value to change every surface.
+ */
+export const RESULT_LABEL: "malaysian" | "descriptor" = "malaysian";
+
+/** The displayed result label for a Love Style, per RESULT_LABEL. */
+export function displayLabel(style: LoveStyleMeta): string {
+  return RESULT_LABEL === "descriptor" ? style.descriptor : style.name;
+}
