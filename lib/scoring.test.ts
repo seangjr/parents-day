@@ -1,7 +1,3 @@
-// `bun:test` is a Bun runtime module. This repo has no `@types/bun` and the
-// slice adds no dependencies, so `tsc` can't resolve its types — suppress the
-// unresolved-import error here. Bun supplies the real module when tests run.
-// @ts-expect-error - bun:test types are provided by the Bun runtime only.
 import { describe, test, expect } from "bun:test";
 import type { QuizAnswer } from "./love-styles";
 import { scoreQuiz, familyMix, type FamilyMember } from "./scoring";
