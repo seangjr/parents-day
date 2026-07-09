@@ -8,6 +8,7 @@ import {
   Button,
   BUTTON_BASE,
   BUTTON_VARIANTS,
+  ButtonContent,
 } from "@/components/ui/button";
 import { TransitionLink } from "@/components/transition";
 import { CodeDisplay } from "./code-display";
@@ -62,11 +63,8 @@ export function FamilyMix({ code }: { code: string }) {
     return (
       <div className="m-auto flex flex-col items-center gap-4 py-20 text-center">
         <p className="text-sage">We couldn&rsquo;t find that family.</p>
-        <TransitionLink
-          href="/family"
-          className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost)}
-        >
-          Back to family
+        <TransitionLink href="/" className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost)}>
+          <ButtonContent>Back to start</ButtonContent>
         </TransitionLink>
       </div>
     );
@@ -117,11 +115,8 @@ export function FamilyMix({ code }: { code: string }) {
       )}
 
       <div className="mt-auto flex flex-col gap-3">
-        <TransitionLink
-          href="/result"
-          className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, "w-full")}
-        >
-          Back to my result
+        <TransitionLink href="/" className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, "w-full")}>
+          <ButtonContent>Done</ButtonContent>
         </TransitionLink>
       </div>
     </div>

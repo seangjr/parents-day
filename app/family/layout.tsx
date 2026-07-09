@@ -10,7 +10,7 @@ import { ParticipantProvider } from "@/lib/participant";
 export default function FamilyLayout({ children }: { children: ReactNode }) {
   return (
     <ParticipantProvider>
-      <main className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 py-10">
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-8 pb-12 pt-24">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-0 h-80 w-80 -translate-x-1/2 rounded-full bg-moss/20 blur-3xl"
