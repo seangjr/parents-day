@@ -205,6 +205,47 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     [lenis, playCover, playReveal, swap, router]
   );
 
+  // App-wide: intercept clicks on internal links so every navigation runs the
+  // transition — no special link component needed, just use `next/link` or <a>.
+  // Capture phase runs before next/link's own handler; preventDefault makes Link
+  // bow out (it early-returns on e.defaultPrevented) while we drive the swap.
+  // Opt a link out with `data-no-transition`.
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const anchor = (event.target as Element | null)?.closest("a");
+      if (
+        !anchor ||
+        anchor.hasAttribute("download") ||
+        anchor.hasAttribute("data-no-transition") ||
+        (anchor.getAttribute("target") ?? "_self") !== "_self" ||
+        (anchor.getAttribute("rel") ?? "").split(/\s+/).includes("external")
+      ) {
+        return;
+      }
+      const href = anchor.getAttribute("href");
+      if (!href) return;
+      const url = new URL(href, window.location.href);
+      // Only same-origin route changes; leave external, hash, and query-only
+      // navigation to the browser / Next (avoids a stuck overlay on same path).
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname) return;
+      event.preventDefault();
+      navigate(url.pathname + url.search + url.hash);
+    }
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [navigate]);
+
   return (
     <TransitionContext.Provider value={{ navigate }}>
       <div data-page-root className="contents">

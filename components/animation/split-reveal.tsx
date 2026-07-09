@@ -59,7 +59,10 @@ export function SplitReveal({
     const stag = stagger ?? timing.stagger;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Reduced-motion-safe: reveal with a gentle opacity fade only — no split,
+      // no vestibular slide — so the text still "arrives" instead of snapping.
       el.style.visibility = "visible";
+      gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" });
       return;
     }
 

@@ -1,0 +1,25 @@
+import { cn } from "@/lib/cn";
+
+/**
+ * FGA wordmark logo. Sourced from the Parents Day 2026 Figma key visual.
+ * Uses `currentColor`, so it inherits text color (cream by default in this app).
+ * Control size with `className` (intrinsic aspect ratio ~2.77:1).
+ */
+export function FgaLogo({
+  className,
+  title = "FGA",
+  ...props
+}: React.SVGProps<SVGSVGElement> & { title?: string }) {
+  return (
+    <svg
+      viewBox="0 0 132.989 48"
+      fill="none"
+      role="img"
+      aria-label={title}
+      className={cn("inline-block h-6 w-auto text-cream", className)}
+      {...props}
+    >
+      <path d="M63.3262 0C71.4609 9.93274e-05 78.6298 4.02245 82.9893 10.2021L75.4609 15.8203C72.8318 11.9327 68.3822 9.3712 63.3262 9.37109C55.2588 9.37109 48.6963 15.9326 48.6963 24C48.6963 32.0674 55.2588 38.6289 63.3262 38.6289C70.1126 38.6288 75.8205 34 77.4834 27.7305H62.7861V19.1914H87.3262V24C87.3262 37.2583 76.5845 47.9998 63.3262 48C50.0677 48 39.3262 37.2584 39.3262 24C39.3262 10.7416 50.0678 0 63.3262 0ZM38.6064 9.79785H12.8311V19.416H30.876V27.7305H12.8311V46.1572H3.70801V27.7305H0V19.416H3.70801V1.4834H38.6064V9.79785ZM114.157 1.21387L132.989 46.1572H123.259L120.247 38.4941H102.067L98.8535 46.1572H89.1016L105.169 9.93262H95.4609V1.21387H114.157ZM105.281 30.2695H116.876L110.921 15.7754L105.281 30.2695Z" fill="currentColor" />
+    </svg>
+  );
+}

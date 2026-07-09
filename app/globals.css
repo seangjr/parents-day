@@ -158,3 +158,197 @@ body {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* ----------------------------------------------------------------------------
+   Stop-motion button — adapted from Osmo "Stop Motion Button (CSS Steps)"
+   A layered button whose hand-drawn body (lib/button-sprites.ts) is redrawn
+   frame by frame with steps(), the label wiggles, and the whole thing pops on
+   a springy scale — restyled onto our palette/type via the --btn-* custom
+   properties. Pure CSS; the React primitive is components/ui/button.tsx.
+---------------------------------------------------------------------------- */
+.btn-motion {
+  /* Palette hooks — set per variant below. */
+  --btn-body: var(--color-lime);       /* hand-drawn body fill  */
+  --btn-edge: var(--color-moss);       /* drawn outline         */
+  --btn-ink: var(--color-olive-black); /* label + default spark */
+  --btn-spark: var(--color-moss);      /* sparkle icon          */
+
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 0.75rem 1.5rem; /* == the previous px-6 py-3 box */
+  color: var(--btn-ink);
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  text-decoration: none; /* for <a> CTAs sharing the look */
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-xs); /* focus-ring shape only; the SVG is the body */
+  /* Springy pop lifted from the Osmo resource. */
+  transform: scale(1) rotate(0.001deg);
+  transition: transform 0.5s cubic-bezier(0.35, 1.75, 0.6, 1);
+}
+
+.btn-motion:hover {
+  transform: scale(1.05) rotate(-1deg);
+}
+.btn-motion:active {
+  transform: scale(0.97) rotate(-1deg);
+}
+
+.btn-motion:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-olive-black),
+    0 0 0 4px var(--color-lime);
+}
+
+.btn-motion:disabled,
+.btn-motion[aria-disabled="true"] {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* --- Variants ------------------------------------------------------------- */
+.btn-motion--primary {
+  --btn-body: var(--color-lime);
+  --btn-edge: var(--color-moss);
+  --btn-ink: var(--color-olive-black);
+  --btn-spark: var(--color-moss);
+}
+.btn-motion--ghost {
+  --btn-body: transparent;
+  --btn-edge: var(--color-sage);
+  --btn-ink: var(--color-cream);
+  --btn-spark: var(--color-lime);
+}
+
+/* --- Hand-drawn body ------------------------------------------------------ */
+.btn-motion__body {
+  position: absolute;
+  inset: -2px; /* let the wobble bleed just past the hit box */
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.btn-motion__body-svg {
+  position: absolute;
+  inset: 0;
+  width: 300%; /* strip is 3 frames wide; window shows one */
+  height: 100%;
+  max-width: none;
+}
+.btn-motion__body-svg path {
+  fill: var(--btn-body);
+  stroke: var(--btn-edge);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke; /* uniform edge despite the non-uniform stretch */
+}
+
+/* --- Optional twinkling sparkle ------------------------------------------- */
+.btn-motion__icon {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  height: 1.15em;
+  aspect-ratio: 1;
+  margin-left: -0.15em;
+  overflow: hidden;
+  pointer-events: none;
+}
+.btn-motion__icon-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: auto; /* 4:1 viewBox → 4 frames wide at 100% height */
+  height: 100%;
+  max-width: none;
+  animation: btn-sprite 0.5s steps(4, end) infinite; /* twinkles continuously */
+}
+.btn-motion__icon-svg path {
+  fill: var(--btn-spark);
+}
+
+/* --- Label ---------------------------------------------------------------- */
+.btn-motion__label {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Stop-motion steps ---------------------------------------------------- */
+@keyframes btn-sprite {
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes btn-wiggle {
+  from {
+    transform: rotate(1.2deg);
+  }
+  to {
+    transform: rotate(-1.2deg);
+  }
+}
+
+/* Body "boils" and the label wiggles while pointer-hovered or keyboard-focused. */
+.btn-motion:hover .btn-motion__body-svg,
+.btn-motion:focus-visible .btn-motion__body-svg {
+  animation: btn-sprite 0.45s steps(3, end) infinite;
+}
+.btn-motion:hover .btn-motion__label,
+.btn-motion:focus-visible .btn-motion__label {
+  animation: btn-wiggle 0.3s steps(2, end) infinite;
+}
+
+/* A disabled button should sit still. */
+.btn-motion:disabled .btn-motion__icon-svg,
+.btn-motion:disabled .btn-motion__body-svg {
+  animation: none;
+}
+
+/* Touch devices can't hover, so run the body "boil" continuously there — the
+   stop-motion look is alive from first paint, not gated behind a hover that
+   never happens on mobile. (prefers-reduced-motion below still wins: it comes
+   later in the cascade at equal specificity.) */
+@media (hover: none) {
+  .btn-motion__body-svg {
+    animation: btn-sprite 0.45s steps(3, end) infinite;
+  }
+}
+
+/* Reduced motion: no jitter, no pop — swap to a plain colour affordance. */
+@media (prefers-reduced-motion: reduce) {
+  .btn-motion,
+  .btn-motion:hover,
+  .btn-motion:active {
+    transform: none;
+    transition: none;
+  }
+  .btn-motion__body-svg,
+  .btn-motion__icon-svg,
+  .btn-motion:hover .btn-motion__body-svg,
+  .btn-motion:focus-visible .btn-motion__body-svg,
+  .btn-motion:hover .btn-motion__label,
+  .btn-motion:focus-visible .btn-motion__label {
+    animation: none;
+  }
+  .btn-motion--primary:hover {
+    --btn-body: var(--color-cream);
+    --btn-edge: var(--color-sage);
+  }
+  .btn-motion--ghost:hover {
+    --btn-body: color-mix(in oklab, var(--color-sage) 16%, transparent);
+    --btn-edge: var(--color-cream);
+  }
+}

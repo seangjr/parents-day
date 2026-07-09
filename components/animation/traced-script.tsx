@@ -6,93 +6,114 @@ import { TRACED_HERO, type TracedGlyph } from "@/lib/traced-hero";
 import { cn } from "@/lib/cn";
 
 interface TracedScriptProps {
-  /** Glyph to trace. Defaults to the pre-generated "Love Revealed" wordmark. */
+  /** Wordmark to reveal. Defaults to the pre-generated "Love Revealed". */
   glyph?: TracedGlyph;
-  /** Class for the <svg> (controls size + color via currentColor). */
+  /** Class for the <svg> (controls size + colour via currentColor). */
   className?: string;
   /** Stroke thickness in viewBox units. */
   strokeWidth?: number;
-  /** Draw-on duration in seconds. */
+  /** Per-letter draw-on (trace) duration in seconds. */
   duration?: number;
-  /** Delay before the draw begins, in seconds. */
+  /** How long each letter takes to snap to a solid fill once traced. */
+  fillDuration?: number;
+  /** Delay before the first letter starts, in seconds. */
   delay?: number;
-  /** Fade a solid fill in once the outline finishes drawing. */
-  fill?: boolean;
+  /** Gap between consecutive letters starting, in seconds. */
+  stagger?: number;
   /**
-   * Changing this value re-runs the draw-on animation — handy for gallery
-   * "replay" controls without remounting.
+   * Changing this value re-runs the reveal — handy for gallery "replay"
+   * controls without remounting.
    */
   replayKey?: string | number;
 }
 
 /**
- * Draws the Oooh Baby script wordmark on via `stroke-dashoffset`, then fades a
- * solid fill in. Renders STATIC path data (`lib/traced-hero.ts`); no font or
- * opentype.js reaches the client. Honors `prefers-reduced-motion` by snapping
- * to the finished state.
+ * Reveals the Oooh Baby script wordmark one letter at a time: each glyph is
+ * traced on via `stroke-dashoffset`, then snaps to a solid fill, staggered left
+ * to right. Renders STATIC per-glyph path data (`lib/traced-hero.ts`) — no font
+ * or opentype.js reaches the client. Honors `prefers-reduced-motion` by showing
+ * the finished wordmark at once.
  */
 export function TracedScript({
   glyph = TRACED_HERO,
   className,
   strokeWidth = 1.5,
-  duration = 2.4,
+  duration = 0.4,
+  fillDuration = 0.14,
   delay = 0.15,
-  fill = true,
+  stagger = 0.26,
   replayKey,
 }: TracedScriptProps) {
-  const pathRef = useRef<SVGPathElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    const path = pathRef.current;
-    if (!path) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const letters = svg.querySelectorAll<SVGPathElement>("path");
+    if (!letters.length) return;
 
     const reduce = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const finalFill = fill ? 1 : 0;
 
     if (reduce) {
-      gsap.set(path, { strokeDashoffset: 0, fillOpacity: finalFill });
+      // Reduced-motion-safe: show the solid wordmark with a gentle opacity fade —
+      // no per-letter tracing (that motion is what reduced-motion opts out of).
+      gsap.set(letters, { strokeOpacity: 0, fillOpacity: 1 });
+      gsap.fromTo(svg, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" });
       return;
     }
 
-    const tl = gsap.timeline();
-    tl.set(path, { strokeDasharray: 1, strokeDashoffset: 1, fillOpacity: 0 });
-    tl.to(path, {
-      strokeDashoffset: 0,
-      duration,
-      delay,
-      ease: "power2.inOut",
+    // Hide each letter behind a full-length dash (measured per glyph, in the
+    // path's own user units), stroke visible, fill off — ready to trace. The
+    // starting strokeOpacity=0 on the element avoids a first-paint flash of the
+    // full outlines before this runs.
+    gsap.set(letters, {
+      strokeOpacity: 1,
+      fillOpacity: 0,
+      strokeDasharray: (_i, el) => el.getTotalLength(),
+      strokeDashoffset: (_i, el) => el.getTotalLength(),
     });
-    if (fill) {
-      tl.to(path, { fillOpacity: 1, duration: 0.6, ease: "power1.out" }, "-=0.4");
-    }
+
+    const tl = gsap.timeline({ delay });
+    letters.forEach((letter, i) => {
+      const at = i * stagger;
+      tl.to(letter, { strokeDashoffset: 0, duration, ease: "power1.inOut" }, at);
+      // As the outline finishes drawing, the letter becomes solid.
+      tl.to(
+        letter,
+        { fillOpacity: 1, duration: fillDuration, ease: "power1.out" },
+        at + duration * 0.85,
+      );
+    });
 
     return () => {
       tl.kill();
     };
-  }, [glyph, duration, delay, fill, replayKey]);
+  }, [glyph, strokeWidth, duration, fillDuration, delay, stagger, replayKey]);
 
   return (
     <svg
+      ref={svgRef}
       viewBox={glyph.viewBox}
       role="img"
       aria-label={glyph.text}
       className={cn("block w-full overflow-visible text-cream", className)}
     >
       <title>{glyph.text}</title>
-      <path
-        ref={pathRef}
-        d={glyph.d}
-        pathLength={1}
-        fill="currentColor"
-        fillOpacity={0}
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
+      {glyph.glyphs.map((d, i) => (
+        <path
+          key={i}
+          d={d}
+          fill="currentColor"
+          fillOpacity={0}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeOpacity={0}
+          strokeLinecap="butt"
+          strokeLinejoin="round"
+        />
+      ))}
     </svg>
   );
 }

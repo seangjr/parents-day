@@ -138,7 +138,7 @@ export default function DesignSystemPage() {
   const total = LOVE_STYLE_ORDER.reduce((sum, id) => sum + counts[id], 0);
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-20 px-6 py-16">
+    <main className="mx-auto flex max-w-5xl flex-col gap-20 px-6 pb-16 pt-24">
       {/* ---- Header ---------------------------------------------------- */}
       <header className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
@@ -239,7 +239,7 @@ export default function DesignSystemPage() {
           <Panel>
             <Caption>Buttons — primary, ghost, disabled</Caption>
             <div className="flex flex-wrap items-center gap-3">
-              <Button>Start Quiz</Button>
+              <Button sparkle>Start Quiz</Button>
               <Button variant="ghost">Invite Family</Button>
               <Button disabled>Submitting…</Button>
               <Button variant="ghost" disabled>
