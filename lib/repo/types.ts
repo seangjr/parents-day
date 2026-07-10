@@ -1,10 +1,7 @@
-import type { LoveStyleId } from "@/lib/love-styles";
+import type { LoveStyleId, Role } from "@/lib/love-styles";
 
-/**
- * A Participant's family relationship (ADR-0002). Logic-bearing: parent,
- * grandparent, and guardian are "parent-figures"; child is a "child".
- */
-export type Role = "parent" | "child" | "grandparent" | "guardian" | "other";
+/** Re-exported for repo consumers; canonical definition lives in @/lib/love-styles. */
+export type { Role };
 
 /**
  * An anonymous Participant — one per device, identified by a client-generated

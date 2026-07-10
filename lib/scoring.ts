@@ -15,14 +15,11 @@ import {
   styleForAnswer,
   type LoveStyleId,
   type QuizAnswer,
+  type Role,
 } from "./love-styles";
 
-/**
- * The family relationship a Participant selects (CONTEXT.md → Role).
- * Parent / Grandparent / Guardian are "parent-figures"; Child is a "child";
- * Other is neither.
- */
-export type Role = "parent" | "child" | "grandparent" | "guardian" | "other";
+/** Re-exported for scoring's callers; canonical definition lives in ./love-styles. */
+export type { Role };
 
 /** Result of scoring one Participant's five answers. */
 export interface QuizResult {

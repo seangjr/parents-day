@@ -117,3 +117,9 @@ export const RESULT_LABEL: "malaysian" | "descriptor" = "malaysian";
 export function displayLabel(style: LoveStyleMeta): string {
   return RESULT_LABEL === "descriptor" ? style.descriptor : style.name;
 }
+
+/**
+ * The family relationship a Participant selects (CONTEXT.md → Role). Logic-bearing:
+ * Parent/Grandparent/Guardian are "parent-figures"; Child is a "child"; Other is neither.
+ */
+export type Role = "parent" | "child" | "grandparent" | "guardian" | "other";
