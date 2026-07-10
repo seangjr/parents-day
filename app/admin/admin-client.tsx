@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { LOVE_STYLES, LOVE_STYLE_ORDER } from "@/lib/love-styles";
+import { LOVE_STYLES, LOVE_STYLE_ORDER, displayLabel } from "@/lib/love-styles";
 import type { Role } from "@/lib/repo";
 import type { AdminMode, AdminStateResponse } from "./types";
 
@@ -188,7 +188,7 @@ export function AdminConsole() {
                   <Icon className="size-5" aria-hidden />
                 </span>
                 <span className="flex-1 font-condensed text-sm font-bold uppercase tracking-wide text-cream">
-                  {meta.name}
+                  {displayLabel(meta)}
                 </span>
                 <span className="font-condensed text-2xl font-bold tabular-nums text-lime">
                   {state.totals.counts[id]}
@@ -283,7 +283,7 @@ export function AdminConsole() {
                   <span className="text-xs text-sage/60">
                     {ROLE_LABEL[sub.role]}
                   </span>
-                  <Pill tint={meta.hex}>{meta.name}</Pill>
+                  <Pill tint={meta.hex}>{displayLabel(meta)}</Pill>
                   {sub.familyCode ? (
                     <span className="text-xs text-sage">{sub.familyCode}</span>
                   ) : null}

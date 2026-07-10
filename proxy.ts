@@ -9,9 +9,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * Auth handshake: a valid `?key=<secret>` mints an httpOnly cookie and redirects
  * to a clean URL (keeping the secret out of history / referer); thereafter the
  * cookie carries the operator — and the LED kiosk's `/api/led-state` polls —
- * through. When `ADMIN_SECRET` is unset the gate is open, matching the repo's
- * dev fallbacks (`getRepo` → in-memory, `led-state` → "live") so the console is
- * usable locally without config. Production MUST set `ADMIN_SECRET`.
+ * through. In development an unset `ADMIN_SECRET` leaves the gate open, matching
+ * the repo's dev fallbacks (`getRepo` → in-memory, `led-state` → "live") so the
+ * console is usable locally without config. In production an unset secret fails
+ * CLOSED (denies): the Reset action is destructive, so a misconfigured deploy
+ * must never expose the console.
  *
  * NOT Vercel Deployment Protection, which would also lock out participants
  * (ADR-0006): the gate is route-scoped in `config.matcher` by design.
@@ -25,8 +27,13 @@ const MAX_AGE = 60 * 60 * 12;
 export function proxy(request: NextRequest): NextResponse {
   const secret = process.env.ADMIN_SECRET;
 
-  // No secret configured → nothing to check (dev). Let everything through.
-  if (!secret) return NextResponse.next();
+  // No secret configured: fail-OPEN in dev (the repo's zero-config local flow),
+  // but fail-CLOSED in production. The Reset action is destructive, so an unset
+  // ADMIN_SECRET must deny rather than expose the console (ADR-0006).
+  if (!secret) {
+    if (process.env.NODE_ENV !== "production") return NextResponse.next();
+    return unauthorized(request.nextUrl.pathname);
+  }
 
   const url = request.nextUrl;
   const cookie = request.cookies.get(COOKIE)?.value;
@@ -56,10 +63,18 @@ export function proxy(request: NextRequest): NextResponse {
   }
 
   // Unauthorised: APIs get a terse 401 JSON; pages get a minimal key form.
-  if (url.pathname.startsWith("/api/")) {
+  return unauthorized(url.pathname);
+}
+
+/**
+ * The unauthorised response: APIs get a terse 401 JSON; pages get a minimal
+ * no-JS key form. Both carry 401 so callers can distinguish the gate.
+ */
+function unauthorized(pathname: string): NextResponse {
+  if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  return new NextResponse(gateHtml(url.pathname), {
+  return new NextResponse(gateHtml(pathname), {
     status: 401,
     headers: { "content-type": "text/html; charset=utf-8" },
   });
