@@ -27,12 +27,17 @@ const MAX_AGE = 60 * 60 * 12;
 export function proxy(request: NextRequest): NextResponse {
   const secret = process.env.ADMIN_SECRET;
 
-  // No secret configured: fail-OPEN in dev (the repo's zero-config local flow),
-  // but fail-CLOSED in production. The Reset action is destructive, so an unset
-  // ADMIN_SECRET must deny rather than expose the console (ADR-0006).
+  // No secret configured: fail-OPEN in dev, and always for the read-only LED
+  // wall — a missing secret must never blank the public projector. Fail-CLOSED
+  // only for the destructive admin surface (/admin, /api/admin) in production,
+  // where an unset ADMIN_SECRET must deny rather than expose Reset (ADR-0006).
   if (!secret) {
-    if (process.env.NODE_ENV !== "production") return NextResponse.next();
-    return unauthorized(request.nextUrl.pathname);
+    const path = request.nextUrl.pathname;
+    const isAdmin = path.startsWith("/admin") || path.startsWith("/api/admin");
+    if (process.env.NODE_ENV === "production" && isAdmin) {
+      return unauthorized(path);
+    }
+    return NextResponse.next();
   }
 
   const url = request.nextUrl;
