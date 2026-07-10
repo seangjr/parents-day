@@ -1,7 +1,7 @@
 import { put } from "@vercel/blob";
 
 /**
- * POST /api/upload — store an optional selfie in private Vercel Blob and return
+ * POST /api/upload — store an optional selfie in public Vercel Blob (obscure random path) and return
  * its URL for the Submission's `selfieUrl` (ADR-0001, ADR-0005).
  *
  * Accepts either a JSON body `{ dataUrl }` (the downscaled data URL captured at
@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const { url } = await put(`selfies/${crypto.randomUUID()}`, image.bytes, {
-      access: "private",
+      access: "public",
       contentType: image.contentType,
     });
     return Response.json({ url });
