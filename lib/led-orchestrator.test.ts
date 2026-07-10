@@ -303,13 +303,40 @@ describe("idle", () => {
 // ---------------------------------------------------------------------------
 
 describe("admin-forced modes", () => {
-  test("paused shows Welcome regardless of a pending queue", () => {
-    const { directive } = poll(initialLedState(0), 0, {
-      mode: "paused",
+  test("paused freezes an in-progress reveal instead of dropping to Welcome", () => {
+    // A live individual reveal is on screen (A).
+    const started = poll(initialLedState(0), 0, {
       newSubmissions: [sub("A")],
       aggregates: aggregates(1),
     });
-    expect(directive.mode).toBe("welcome");
+    expect(started.directive.mode).toBe("active-join");
+
+    // Pausing past the reveal hold + cadence must HOLD that frame: still A, never
+    // the idle Welcome QR — and the newly-arrived B is not advanced onto the wall.
+    const paused = poll(started.state, LED_TIMING.revealInterval, {
+      mode: "paused",
+      newSubmissions: [sub("B")],
+      aggregates: aggregates(2),
+    });
+    expect(paused.directive.mode).toBe("active-join");
+    if (paused.directive.mode !== "active-join") throw new Error("unreachable");
+    expect(paused.directive.payload.reveal.participantId).toBe("A");
+    expect(paused.state.queue.map((q) => q.participantId)).toEqual(["B"]);
+    // The segment is frozen — `since` is not reset by the hold.
+    expect(paused.state.current.since).toBe(0);
+  });
+
+  test("paused holds the cluster wall rather than the join QR", () => {
+    const live = poll(initialLedState(0), 0, {
+      families: [family("TAN", [{ firstName: "Sarah" }])],
+    });
+    expect(live.directive.mode).toBe("cluster-wall");
+
+    const paused = poll(live.state, 1000, {
+      mode: "paused",
+      families: [family("TAN", [{ firstName: "Sarah" }])],
+    });
+    expect(paused.directive.mode).toBe("cluster-wall");
   });
 
   test("welcome is forced", () => {

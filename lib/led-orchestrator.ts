@@ -352,6 +352,10 @@ function chooseSegment(state: OrchestratorState, now: number): Choice {
   // Admin-forced modes win over everything (top priority).
   switch (state.adminMode) {
     case "paused":
+      // "Hold the wall": freeze the current frame (admin hint "Hold the wall").
+      // Keep the current mode/target, do not advance reveals, and do not drop to
+      // the idle join QR — hold re-renders the held segment with fresh poll data.
+      return { kind: "hold" };
     case "welcome":
       return { kind: "start", mode: "welcome", target: null };
     case "photo-moment": {
