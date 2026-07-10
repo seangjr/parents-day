@@ -131,8 +131,18 @@ body {
 ---------------------------------------------------------------------------- */
 /* FOUC guard: sans headings stay hidden until SplitReveal reveals them (it
    always sets visibility, animating or — under reduced motion — snapping). */
+/* Safety net: the 0s keyframe below force-reveals headings after 4s even if
+   JS/hydration never runs (iOS failure mode), so the raw text shows instead of
+   staying permanently blank. SplitReveal sets visibility:visible far earlier on
+   the happy path; both drive toward `visible`, so they never conflict. */
 [data-split] {
   visibility: hidden;
+  animation: split-fouc-failsafe 0s linear 4s forwards;
+}
+@keyframes split-fouc-failsafe {
+  to {
+    visibility: visible;
+  }
 }
 
 /* Number Odometer — each digit is a masked viewport over a stacked 0–9 track

@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { TRACED_HERO, type TracedGlyph } from "@/lib/traced-hero";
 import { cn } from "@/lib/cn";
+
+// useLayoutEffect on the client (fires before paint → no flash), useEffect on
+// the server (SSR has no layout phase). Lets us apply the GSAP from-state
+// before the first paint while keeping the render visible-by-default.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 interface TracedScriptProps {
   /** Wordmark to reveal. Defaults to the pre-generated "Love Revealed". */
@@ -46,7 +52,7 @@ export function TracedScript({
 }: TracedScriptProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
     const letters = svg.querySelectorAll<SVGPathElement>("path");
@@ -66,8 +72,10 @@ export function TracedScript({
 
     // Hide each letter behind a full-length dash (measured per glyph, in the
     // path's own user units), stroke visible, fill off — ready to trace. The
-    // starting strokeOpacity=0 on the element avoids a first-paint flash of the
-    // full outlines before this runs.
+    // starting strokeOpacity=0 on the element avoids a first-paint flash. Runs
+    // in a layout effect so this from-state lands before paint: no flash of the
+    // visible-by-default solid fill, yet a JS/hydration failure leaves that
+    // solid wordmark on screen instead of a blank hero.
     gsap.set(letters, {
       strokeOpacity: 1,
       fillOpacity: 0,
@@ -101,12 +109,15 @@ export function TracedScript({
       className={cn("block w-full overflow-visible text-cream", className)}
     >
       <title>{glyph.text}</title>
+      {/* Visible-by-default (fillOpacity=1): the solid wordmark is the no-JS /
+          hydration-failure fallback; the layout effect sets the trace
+          from-state before paint so the happy path still animates cleanly. */}
       {glyph.glyphs.map((d, i) => (
         <path
           key={i}
           d={d}
           fill="currentColor"
-          fillOpacity={0}
+          fillOpacity={1}
           stroke="currentColor"
           strokeWidth={strokeWidth}
           strokeOpacity={0}
