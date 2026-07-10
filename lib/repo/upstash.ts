@@ -1,4 +1,5 @@
-import { Redis } from "@upstash/redis";
+import type { Redis } from "@upstash/redis";
+import { redisFromEnv } from "@/lib/redis";
 import { LOVE_STYLE_ORDER } from "@/lib/love-styles";
 import { MAX_FAMILY_SIZE, mintFamilyCode, zeroCounts } from "./internal";
 import type { Repository } from "./repository";
@@ -34,14 +35,13 @@ export class UpstashRepository implements Repository {
 
   private redis(): Redis {
     if (!this.client) {
-      const url = process.env.UPSTASH_REDIS_REST_URL;
-      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-      if (!url || !token) {
+      const client = redisFromEnv();
+      if (!client) {
         throw new Error(
           "UpstashRepository requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN",
         );
       }
-      this.client = new Redis({ url, token });
+      this.client = client;
     }
     return this.client;
   }
