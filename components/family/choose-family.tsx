@@ -19,7 +19,7 @@ export function ChooseFamily() {
 
       <div className="flex flex-col gap-4">
         <h1 className="font-display text-5xl leading-tight text-lime">
-          Create or join a family group
+          Create or join a Family
         </h1>
         <p className="leading-relaxed text-cream">
           Your results will be grouped together on the live wall.
@@ -29,7 +29,7 @@ export function ChooseFamily() {
       <div className="flex flex-col gap-4">
         <ChoiceCard
           title="Create a family"
-          body="Start a new family group and get a code for others to join."
+          body="Start a new Family and get a code for others to join."
           action="Create"
           href="/family/create"
         />

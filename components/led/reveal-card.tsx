@@ -1,4 +1,4 @@
-import { LOVE_STYLES, type LoveStyleId } from "@/lib/love-styles";
+import { LOVE_STYLES, displayLabel, type LoveStyleId } from "@/lib/love-styles";
 import { cn } from "@/lib/cn";
 import { Pill } from "@/components/ui/pill";
 
@@ -72,7 +72,7 @@ export function RevealCard({
           className="font-condensed text-2xl font-bold uppercase tracking-wide"
           style={{ color: meta.hex }}
         >
-          {meta.name}
+          {displayLabel(meta)}
         </span>
         <span className="text-sm text-sage">{meta.descriptor}</span>
       </div>

@@ -1,4 +1,4 @@
-import { LOVE_STYLE_LIST, type LoveStyleId } from "@/lib/love-styles";
+import { LOVE_STYLE_LIST, displayLabel, type LoveStyleId } from "@/lib/love-styles";
 import { cn } from "@/lib/cn";
 import { Odometer } from "@/components/animation/odometer";
 
@@ -42,7 +42,7 @@ export function CommunityDashboard({
             <div className="flex flex-1 flex-col gap-1.5">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="font-condensed text-lg font-bold uppercase tracking-wide text-cream">
-                  {meta.name}
+                  {displayLabel(meta)}
                 </span>
                 <span className="flex items-baseline gap-2">
                   <span
