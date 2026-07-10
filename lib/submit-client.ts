@@ -22,6 +22,7 @@ export interface SubmitPayload {
 }
 
 const ENDPOINT = "/api/submit";
+const UPLOAD_ENDPOINT = "/api/upload";
 const MAX_ATTEMPTS = 5;
 const BASE_DELAY_MS = 500;
 const MAX_DELAY_MS = 8000;
@@ -29,6 +30,8 @@ const MAX_DELAY_MS = 8000;
 interface QueueEntry {
   payload: SubmitPayload;
   attempts: number;
+  /** Pending selfie data URL to upload before the first post; null once done. */
+  selfie: string | null;
 }
 
 // One pending Submission per Participant (keyed by id): a retake replaces the
@@ -37,11 +40,15 @@ const queue = new Map<string, QueueEntry>();
 let draining = false;
 
 /**
- * Best-effort submit: enqueue the Submission and kick the retry loop. Returns
- * immediately — the caller never awaits the network (fire-and-forget).
+ * Best-effort submit: enqueue the Submission (with an optional selfie data URL
+ * to upload first) and kick the retry loop. Returns immediately — the caller
+ * never awaits the network (fire-and-forget).
  */
-export function submitResult(payload: SubmitPayload): void {
-  queue.set(payload.participantId, { payload, attempts: 0 });
+export function submitResult(
+  payload: SubmitPayload,
+  selfie?: string | null,
+): void {
+  queue.set(payload.participantId, { payload, attempts: 0, selfie: selfie ?? null });
   void drain();
 }
 
@@ -71,6 +78,26 @@ async function postSubmission(payload: SubmitPayload): Promise<boolean> {
   }
 }
 
+/**
+ * Best-effort selfie upload → the stored private-Blob URL, or null when the
+ * store is unconfigured or the upload fails. Never throws: selfies are optional
+ * and must not block the Submission (ADR-0005).
+ */
+async function uploadSelfie(dataUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(UPLOAD_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ dataUrl }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { url?: unknown };
+    return typeof data.url === "string" ? data.url : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Drain the queue sequentially, retrying each Submission with backoff. */
 async function drain(): Promise<void> {
   if (draining) return;
@@ -80,6 +107,15 @@ async function drain(): Promise<void> {
       const next = queue.entries().next();
       if (next.done) break;
       const [id, entry] = next.value;
+
+      // Resolve the optional selfie once, best-effort, before the first post: a
+      // failed or unconfigured upload degrades to `selfieUrl: null` and never
+      // blocks the Submission (ADR-0005). Cleared afterwards so a retry does
+      // not re-upload and orphan a duplicate Blob.
+      if (entry.selfie !== null) {
+        entry.payload.selfieUrl = await uploadSelfie(entry.selfie);
+        entry.selfie = null;
+      }
 
       const ok = await postSubmission(entry.payload);
 

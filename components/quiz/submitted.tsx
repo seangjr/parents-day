@@ -51,16 +51,19 @@ export function Submitted() {
   // Fire the Submission once on entry (fire-and-forget; idempotent by id).
   useEffect(() => {
     if (sent.current || !ready || !result) return;
-    const { id, firstName, role, family } = participant;
+    const { id, firstName, role, family, selfie } = participant;
     if (!role || !family) return;
     sent.current = true;
-    submitResult({
-      participantId: id,
-      firstName,
-      role,
-      familyCode: family.code,
-      primary: result.primary,
-    });
+    submitResult(
+      {
+        participantId: id,
+        firstName,
+        role,
+        familyCode: family.code,
+        primary: result.primary,
+      },
+      selfie,
+    );
   }, [ready, result, participant]);
 
   if (!ready || !result || !participant.family) {
