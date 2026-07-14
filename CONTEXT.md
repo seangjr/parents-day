@@ -81,5 +81,5 @@ _Avoid_: Screensaver, welcome loop, standby
 ### Operations
 
 **Admin**:
-The single operator console (shared-secret gated) that starts and stops the event, controls the LED mode, removes items, and resets data. One shared login, no roles.
+The single operator console (six-digit event-PIN gated) that starts and stops the event, controls the LED mode, removes items, and resets data. One shared login, no roles.
 _Avoid_: Dashboard, backend, moderator, console

@@ -2,15 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Share2 } from "lucide-react";
+import { Check, Share2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { LOVE_STYLES, displayLabel } from "@/lib/love-styles";
 import { scoreQuiz } from "@/lib/scoring";
 import {
   BUTTON_BASE,
   BUTTON_VARIANTS,
+  Button,
   ButtonContent,
 } from "@/components/ui/button";
+import { SplitReveal } from "@/components/animation/split-reveal";
 import { TransitionLink } from "@/components/transition";
 import { useParticipant } from "@/lib/participant";
 import { submitResult } from "@/lib/submit-client";
@@ -92,16 +94,16 @@ export function Submitted() {
   return (
     <div className="flex flex-1 flex-col justify-center gap-12 py-4">
       <div className="flex flex-col items-center gap-4 text-center">
-        <h1 className="font-display text-6xl leading-none text-lime">
+        <SplitReveal as="h1" className="font-display text-6xl leading-none text-lime">
           You&rsquo;re on the wall
-        </h1>
-        <p className="text-base leading-relaxed text-cream">
+        </SplitReveal>
+        <p className="motion-enter text-base leading-relaxed text-cream" style={{ animationDelay: "40ms" }}>
           Look for {family.name} on the LED screen. Your result will appear with
           your family.
         </p>
       </div>
 
-      <div className="flex flex-col gap-6 rounded-card border border-lime/40 bg-lime/10 p-8 backdrop-blur-sm">
+      <div className="motion-pop flex flex-col gap-6 rounded-card border border-lime/40 bg-lime/10 p-8 backdrop-blur-sm" style={{ animationDelay: "100ms" }}>
         <div className="flex flex-col items-center gap-1 text-center">
           <p className="font-condensed text-xs font-bold uppercase tracking-[0.2em] text-sage">
             Submission Details
@@ -114,8 +116,8 @@ export function Submitted() {
         </div>
         <div className="flex h-14 items-center justify-center" aria-hidden>
           <svg viewBox="0 0 120 48" className="h-full w-auto">
-            <line x1="34" y1="30" x2="60" y2="24" stroke={primary.hex} strokeOpacity={0.4} strokeWidth={1} />
-            <line x1="60" y1="24" x2="86" y2="14" stroke={primary.hex} strokeOpacity={0.4} strokeWidth={1} />
+            <line x1="34" y1="30" x2="60" y2="24" stroke={primary.hex} strokeOpacity={0.4} strokeWidth={1} pathLength={1} strokeDasharray={1} className="motion-draw-line" style={{ animationDelay: "280ms" }} />
+            <line x1="60" y1="24" x2="86" y2="14" stroke={primary.hex} strokeOpacity={0.4} strokeWidth={1} pathLength={1} strokeDasharray={1} className="motion-draw-line" style={{ animationDelay: "360ms" }} />
             <circle cx="60" cy="24" r="6" fill={primary.hex} />
             <circle cx="34" cy="30" r="3" fill={primary.hex} fillOpacity={0.7} />
             <circle cx="86" cy="14" r="4" fill={primary.hex} fillOpacity={0.85} />
@@ -124,7 +126,7 @@ export function Submitted() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="motion-enter flex flex-col gap-6" style={{ animationDelay: "180ms" }}>
         <TransitionLink
           href={`/family/${family.code}`}
           className={cn(BUTTON_BASE, BUTTON_VARIANTS.primary, "w-full")}
@@ -136,14 +138,48 @@ export function Submitted() {
           <span className="rounded-xs border border-moss bg-shadow/40 px-4 py-2 font-condensed text-2xl font-bold tracking-[0.15em] text-lime">
             {family.code}
           </span>
-          <button
-            type="button"
+          <Button
+            variant="text"
             onClick={shareCode}
-            className="inline-flex items-center gap-1.5 rounded-xs text-sm text-lime underline underline-offset-4 transition-colors duration-300 ease-smooth hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
+            className="gap-1.5"
+            aria-label="Share family code"
           >
-            <Share2 className="size-4" aria-hidden />
-            {shared ? "Shared" : "Share family code"}
-          </button>
+            <span aria-hidden className="grid size-4 shrink-0 place-items-center">
+              <Share2
+                className={cn(
+                  "col-start-1 row-start-1 size-4 transition-opacity duration-200 ease-smooth motion-reduce:transition-none",
+                  shared && "opacity-0",
+                )}
+              />
+              <Check
+                className={cn(
+                  "col-start-1 row-start-1 size-4 text-lime transition-opacity duration-200 ease-smooth motion-reduce:transition-none",
+                  shared ? "opacity-100" : "opacity-0",
+                )}
+              />
+            </span>
+            <span aria-hidden className="grid place-items-center">
+              <span
+                className={cn(
+                  "col-start-1 row-start-1 transition-opacity duration-200 ease-smooth motion-reduce:transition-none",
+                  shared && "opacity-0",
+                )}
+              >
+                Share family code
+              </span>
+              <span
+                className={cn(
+                  "col-start-1 row-start-1 transition-opacity duration-200 ease-smooth motion-reduce:transition-none",
+                  shared ? "opacity-100" : "opacity-0",
+                )}
+              >
+                Shared
+              </span>
+            </span>
+            <span role="status" className="sr-only">
+              {shared ? "Family code shared" : ""}
+            </span>
+          </Button>
         </div>
       </div>
     </div>

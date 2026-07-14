@@ -1,4 +1,4 @@
-# 0006 — Admin auth via shared secret
+# 0006 — Admin auth via six-digit event PIN
 
 Status: accepted
 
@@ -8,7 +8,7 @@ One-off internal event, single operator, no user accounts. The admin console (`/
 
 ## Decision
 
-Gate `/admin` and `/led` behind a **single shared secret** (env-configured token/password) checked in **Vercel Routing Middleware**. Participant routes remain open. No accounts, no roles.
+Gate `/admin`, `/led`, and their APIs behind one **six-digit event PIN** from `ADMIN_PIN`, checked in **Next.js Proxy**. A same-origin form POST exchanges the PIN for a 12-hour httpOnly cookie; the credential never enters the URL. Participant routes remain open. Production fails closed when the PIN is missing or malformed. No accounts, no roles.
 
 ## Considered options
 
@@ -17,5 +17,5 @@ Gate `/admin` and `/led` behind a **single shared secret** (env-configured token
 
 ## Consequences
 
-- No per-person audit trail (one shared password) — acceptable for a single operator.
+- No per-person audit trail and only six digits of entropy — acceptable for a single-operator, one-day internal event; not suitable as internet-grade authentication for a public or long-lived deployment.
 - **Do NOT enable Vercel's built-in Deployment Protection to "secure" this app** — it would lock out participants. Protection is route-scoped in middleware by design.

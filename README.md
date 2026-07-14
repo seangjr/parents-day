@@ -13,8 +13,7 @@ bun dev            # http://localhost:3000
 ```
 
 With no environment set, the app runs fully local: an in-memory repository
-stands in for Redis and the shared-secret gate is open, so every surface is
-reachable.
+stands in for Redis and the PIN gate is open, so every surface is reachable.
 
 ### Environment
 
@@ -22,8 +21,8 @@ Copy `.env.example` to `.env.local` for a real backend:
 
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — Upstash Redis, the
   single source of truth. Absent ⇒ in-memory repo (dev only).
-- `ADMIN_SECRET` — shared secret gating `/admin` and `/led`. Absent ⇒ gate open;
-  production MUST set it.
+- `ADMIN_PIN` — exactly six numeric digits gating `/admin` and `/led`. Absent ⇒
+  gate open in development; production fails closed.
 
 ### Surfaces
 
@@ -34,8 +33,8 @@ Copy `.env.example` to `.env.local` for a real backend:
   photo moment. Holds the last frame and resyncs from the Redis cursor on a
   failed poll, so it never blanks.
 - **Admin — `/admin`**: operator console. Set the LED mode, force a reveal,
-  remove an item, reset all data. Gated by `ADMIN_SECRET` (append `?key=<secret>`
-  once to mint the operator cookie).
+  remove an item, reset all data. Enter `ADMIN_PIN` on the access screen once to
+  mint the 12-hour operator cookie shared with `/led`.
 
 ### Deploy
 

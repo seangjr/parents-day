@@ -25,7 +25,7 @@ const TICK_MS = 500;
  * blanks and never loses reveals.
  */
 export function LedClient() {
-  const stateRef = useRef(initialLedState(Date.now()));
+  const stateRef = useRef(initialLedState(0));
   const cursorRef = useRef(0);
   const [directive, setDirective] = useState<LedDirective>({
     mode: "welcome",
@@ -34,6 +34,7 @@ export function LedClient() {
   });
 
   useEffect(() => {
+    stateRef.current = initialLedState(Date.now());
     let cancelled = false;
     async function poll() {
       try {

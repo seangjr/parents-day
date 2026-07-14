@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
+import { SplitReveal } from "@/components/animation/split-reveal";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Pill } from "@/components/ui/pill";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { LOVE_STYLES, LOVE_STYLE_ORDER, displayLabel } from "@/lib/love-styles";
@@ -14,7 +16,7 @@ const POLL_MS = 2000;
 
 const MODES: { id: AdminMode; label: string; hint: string }[] = [
   { id: "welcome", label: "Welcome", hint: "Idle join QR" },
-  { id: "live", label: "Live", hint: "Reveals + dashboard" },
+  { id: "live", label: "Live", hint: "Family rotation + reveals" },
   { id: "photo-moment", label: "Photo Moment", hint: "Spotlight biggest family" },
   { id: "paused", label: "Paused", hint: "Hold the wall" },
 ];
@@ -27,12 +29,10 @@ const ROLE_LABEL: Record<Role, string> = {
   other: "Other",
 };
 
-const TOGGLE_BASE =
-  "rounded-xs border px-4 py-3 text-left transition-colors duration-200 ease-smooth focus:outline-none focus:ring-2 focus:ring-lime disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * The operator console (ADR-0006). Polls `/api/admin/state` for a live view and
- * posts to the admin action endpoints; the shared-secret cookie set by proxy.ts
+ * posts to the admin action endpoints; the PIN cookie set by proxy.ts
  * authorises every request. All fine LED timing stays on the `/led` client — the
  * operator only sets coarse state here (ADR-0004).
  */
@@ -53,9 +53,12 @@ export function AdminConsole() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-    const id = window.setInterval(refresh, POLL_MS);
-    return () => window.clearInterval(id);
+    const initial = window.setTimeout(() => void refresh(), 0);
+    const interval = window.setInterval(refresh, POLL_MS);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
   }, [refresh]);
 
   const act = useCallback(
@@ -95,6 +98,10 @@ export function AdminConsole() {
     );
   }
 
+  const photoMomentAvailable = state.families.some(
+    (family) => family.submittedCount >= 2,
+  );
+
   return (
     <main className="mx-auto flex min-h-dvh max-w-4xl flex-col gap-10 px-6 py-10 sm:px-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -102,9 +109,9 @@ export function AdminConsole() {
           <p className="font-condensed text-xs font-bold uppercase tracking-[0.2em] text-lime">
             Parents Day 2026
           </p>
-          <h1 className="font-condensed text-3xl font-bold uppercase tracking-wide text-cream">
+          <SplitReveal as="h1" className="font-condensed text-3xl font-bold uppercase tracking-wide text-cream">
             Admin Console
-          </h1>
+          </SplitReveal>
         </div>
         <div className="flex items-center gap-4">
           <Pill tint={state.running ? "#F0F4A6" : "#FFDAB9"}>
@@ -134,25 +141,23 @@ export function AdminConsole() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {MODES.map((m) => {
             const active = state.mode === m.id;
+            const unavailable =
+              m.id === "photo-moment" && !photoMomentAvailable;
             return (
-              <button
+              <Chip
                 key={m.id}
-                type="button"
-                disabled={busy}
-                aria-pressed={active}
+                selected={active}
+                disabled={busy || unavailable}
                 onClick={() => act("/api/admin/mode", { mode: m.id })}
-                className={cn(
-                  TOGGLE_BASE,
-                  active
-                    ? "border-lime bg-lime/15 text-lime"
-                    : "border-sage/30 text-sage hover:border-sage hover:text-cream",
-                )}
+                className="w-full rounded-xs flex-col items-start gap-0.5 py-3 text-left"
               >
-                <span className="block font-condensed text-base font-bold uppercase tracking-wide">
+                <span className="font-condensed text-base font-bold uppercase tracking-wide">
                   {m.label}
                 </span>
-                <span className="mt-1 block text-xs opacity-80">{m.hint}</span>
-              </button>
+                <span className="mt-1 text-xs opacity-80">
+                  {unavailable ? "Needs 2+ submitted results" : m.hint}
+                </span>
+              </Chip>
             );
           })}
         </div>
@@ -167,6 +172,7 @@ export function AdminConsole() {
         <SectionHeading
           number={2}
           title={`Community · ${state.totals.total} counted`}
+          animated={false}
         />
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {LOVE_STYLE_ORDER.map((id) => {
@@ -200,7 +206,7 @@ export function AdminConsole() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <SectionHeading number={3} title={`Families · ${state.families.length}`} />
+        <SectionHeading number={3} title={`Families · ${state.families.length}`} animated={false} />
         {state.families.length === 0 ? (
           <p className="text-sm text-sage/70">No families yet.</p>
         ) : (
@@ -252,6 +258,7 @@ export function AdminConsole() {
         <SectionHeading
           number={4}
           title={`Submissions · ${state.submissions.length}`}
+          animated={false}
         />
         {state.removedCount > 0 ? (
           <p className="text-xs text-sage/70">{state.removedCount} hidden</p>
@@ -296,8 +303,8 @@ export function AdminConsole() {
                       minute: "2-digit",
                     })}
                   </span>
-                  <button
-                    type="button"
+                  <Button
+                    variant={sub.removed ? "text" : "danger"}
                     disabled={busy}
                     onClick={() =>
                       act("/api/admin/remove", {
@@ -305,15 +312,9 @@ export function AdminConsole() {
                         removed: !sub.removed,
                       })
                     }
-                    className={cn(
-                      "rounded-xs px-2 py-1 text-xs font-medium underline underline-offset-2 transition-colors duration-200 ease-smooth focus:outline-none focus:ring-2 focus:ring-lime disabled:opacity-50",
-                      sub.removed
-                        ? "text-sage hover:text-cream"
-                        : "text-peach hover:text-peach/70",
-                    )}
                   >
                     {sub.removed ? "Restore" : "Remove"}
-                  </button>
+                  </Button>
                 </li>
               );
             })}

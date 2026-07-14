@@ -220,13 +220,13 @@ export default function DesignSystemPage() {
                   style={{ left: slide ? "calc(100% - 2rem)" : "0px" }}
                 />
               </div>
-              <button
-                type="button"
+              <Button
+                variant="text"
+                className="mt-3"
                 onClick={() => setSlide((s) => !s)}
-                className="mt-3 font-condensed text-sm font-bold uppercase tracking-wide text-lime"
               >
                 Toggle motion →
-              </button>
+              </Button>
             </div>
           </Panel>
         </div>

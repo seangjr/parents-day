@@ -23,12 +23,16 @@ export function CommunityDashboard({
 
   return (
     <div className={cn("flex flex-col gap-5", className)}>
-      {LOVE_STYLE_LIST.map((meta) => {
+      {LOVE_STYLE_LIST.map((meta, i) => {
         const count = counts[meta.id] ?? 0;
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
         const Icon = meta.icon;
         return (
-          <div key={meta.id} className="flex items-center gap-4">
+          <div
+            key={meta.id}
+            className="motion-enter flex items-center gap-4"
+            style={{ animationDelay: `${i * 40}ms` }}
+          >
             <span
               className="flex size-11 shrink-0 items-center justify-center rounded-xs border"
               style={{

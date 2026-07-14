@@ -3,8 +3,6 @@ import { Oooh_Baby, Big_Shoulders, Geist } from "next/font/google";
 import "./globals.css";
 import { LenisProvider } from "./lenis-provider";
 import { TransitionProvider } from "@/components/transition";
-import Link from "next/link";
-import { FgaLogo } from "@/components/ui/fga-logo";
 
 const displayFont = Oooh_Baby({
   weight: "400",
@@ -46,16 +44,6 @@ export default function RootLayout({
       className={`${displayFont.variable} ${condensedFont.variable} ${bodyFont.variable} antialiased`}
     >
       <body className="min-h-dvh">
-        <Link
-          href="/"
-          aria-label="FGA — Parents Day 2026 home"
-          className="fixed left-6 top-6 z-50 flex flex-col items-center gap-2 transition-opacity hover:opacity-70 sm:left-8 sm:top-8"
-        >
-          <FgaLogo className="h-5 w-auto" />
-          <span className="font-condensed text-xs font-bold uppercase tracking-[0.2em] text-lime">
-            Parents Day 2026
-          </span>
-        </Link>
         <LenisProvider>
           <TransitionProvider>{children}</TransitionProvider>
         </LenisProvider>

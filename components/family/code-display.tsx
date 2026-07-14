@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
 
 interface CodeDisplayProps {
   code: string;
@@ -24,12 +25,12 @@ export function CodeDisplay({ code, className }: CodeDisplayProps) {
   }
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="surface"
       onClick={handleCopy}
       aria-label={`Copy Family Code ${code}`}
       className={cn(
-        "group flex w-full items-center justify-center gap-4 rounded-card border border-lime/40 bg-shadow/60 px-6 py-5 transition-colors duration-300 ease-smooth hover:border-lime/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime",
+        "group w-full gap-4 border-lime/40 bg-shadow/60 px-6 py-5 hover:border-lime/70 hover:bg-transparent",
         className,
       )}
     >
@@ -49,6 +50,6 @@ export function CodeDisplay({ code, className }: CodeDisplayProps) {
       <span role="status" className="sr-only">
         {copied ? "Family Code copied" : ""}
       </span>
-    </button>
+    </Button>
   );
 }

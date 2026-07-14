@@ -33,8 +33,8 @@ family, and community results revealed live on a foyer LED — then it's wiped.
   > After this: submitting records to Redis (best-effort retry) and the five community counts update.
 - [ ] **S07: LED display + orchestrator** `risk:high` `depends:[S03,S06]`
   > After this: `/led` polls and runs idle → individual reveals → family reveals → rolling community dashboard → photo moment, draining a flood gracefully.
-- [ ] **S08: Admin console + shared-secret auth** `risk:medium` `depends:[S03,S07]`
-  > After this: staff reach `/admin` + `/led` behind a shared secret, flip LED mode, force a reveal, remove an item, and reset all data; participant routes stay open.
+- [ ] **S08: Admin console + PIN auth** `risk:medium` `depends:[S03,S07]`
+  > After this: staff reach `/admin` + `/led` behind a six-digit event PIN, flip LED mode, force a reveal, remove an item, and reset all data; participant routes stay open.
 - [ ] **S09: Integration + reliability pass** `risk:high` `depends:[S04,S05,S06,S07,S08]`
   > After this: full foyer run — scan → quiz → family → LED reveal → dashboard → admin control; LED never blanks/resyncs; `sin1` config; `prefers-reduced-motion` respected.
 

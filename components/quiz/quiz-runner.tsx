@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
-import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
+import { QuizOption } from "@/components/ui/quiz-option";
+import { SplitReveal } from "@/components/animation/split-reveal";
 import { useTransitionRouter } from "@/components/transition";
 import { WizardStep } from "./wizard-step";
 import { QUIZ_QUESTIONS } from "./questions";
@@ -32,11 +32,14 @@ export function QuizRunner() {
 
   // Resume at the first unanswered question once hydrated.
   useEffect(() => {
-    if (ready && !seeded) {
-      const firstUnanswered = participant.answers.findIndex((a) => a === null);
+    if (!ready || seeded) return;
+
+    const firstUnanswered = participant.answers.findIndex((answer) => answer === null);
+    const timer = window.setTimeout(() => {
       setIndex(firstUnanswered === -1 ? 0 : firstUnanswered);
       setSeeded(true);
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [ready, seeded, participant.answers]);
 
   if (!ready || !hasProfile) {
@@ -61,41 +64,33 @@ export function QuizRunner() {
         progress={(index + 1) / QUESTION_COUNT}
       />
 
-      <h1
+      <SplitReveal
         key={question.id}
-        className="font-display text-4xl leading-tight text-lime motion-safe:animate-rise"
+        as="h1"
+        className="font-display text-4xl leading-tight text-lime"
       >
         {question.prompt}
-      </h1>
+      </SplitReveal>
 
       <div key={`options-${question.id}`} className="flex flex-col gap-3">
-        {question.options.map((option) => {
+        {question.options.map((option, i) => {
           const selected = current === option.letter;
           return (
-            <button
+            <QuizOption
               key={option.letter}
-              type="button"
-              aria-pressed={selected}
+              className="motion-enter"
+              style={{ animationDelay: `${i * 45}ms` }}
+              letter={option.letter}
+              selected={selected}
               onClick={() => setAnswer(index, option.letter)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-card border p-5 text-left transition-all duration-300 ease-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-olive-black",
-                selected
-                  ? "border-lime bg-lime/10 shadow-glow"
-                  : "border-lime/30 bg-lime/5 hover:border-lime/60",
-              )}
             >
-              <span className="flex-1 text-cream">{option.text}</span>
-              {selected ? (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-lime text-olive-black">
-                  <Check className="size-3" strokeWidth={3} aria-hidden />
-                </span>
-              ) : null}
-            </button>
+              {option.text}
+            </QuizOption>
           );
         })}
       </div>
 
-      <div className="mt-auto pt-2">
+      <div className="motion-enter mt-auto pt-2" style={{ animationDelay: `${question.options.length * 45}ms` }}>
         <Button onClick={next} className="w-full" disabled={!current}>
           Next
         </Button>

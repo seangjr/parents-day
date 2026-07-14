@@ -1,4 +1,5 @@
 import { getRepo } from "@/lib/repo";
+import { familiesIncludingLegacy } from "@/lib/repo/family-list";
 import { LOVE_STYLE_ORDER, type LoveStyleId } from "@/lib/love-styles";
 import type {
   AdminFamilyView,
@@ -14,56 +15,43 @@ import { readAdminState } from "../store";
  * Pure read, never cached; the console polls it.
  *
  * Family/submission enumeration mirrors the LED read path (`/api/led-state`):
- * distinct family codes in first-seen order from the append-only log, families
- * hydrated via `familyByCode` + `submissionsForFamily`.
+ * the explicit Family index exposes newly joined Families immediately, while the
+ * append-only Submission log preserves pre-index event data.
  */
 export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
   const repo = getRepo();
-  const [{ mode, running, removed }, aggregates, log] = await Promise.all([
-    readAdminState(),
-    repo.aggregates(),
-    repo.submissionLog(0),
-  ]);
+  const [{ mode, running, removed }, aggregates, log, indexedFamilies] =
+    await Promise.all([
+      readAdminState(),
+      repo.aggregates(),
+      repo.submissionLog(0),
+      repo.allFamilies(),
+    ]);
 
   const entries = log.entries;
 
-  // Distinct family codes in first-seen order — the families on the wall.
-  const codes: string[] = [];
-  const seenCodes = new Set<string>();
-  for (const entry of entries) {
-    if (entry.familyCode && !seenCodes.has(entry.familyCode)) {
-      seenCodes.add(entry.familyCode);
-      codes.push(entry.familyCode);
-    }
-  }
-
-  const families = (
-    await Promise.all(
-      codes.map(async (code): Promise<AdminFamilyView | null> => {
-        const [family, members] = await Promise.all([
-          repo.familyByCode(code),
-          repo.submissionsForFamily(code),
-        ]);
-        if (!family && members.length === 0) return null;
-        const memberViews = members.map((m) => ({
-          participantId: m.participantId,
-          firstName: m.firstName,
-          role: m.role,
-          primary: m.primary,
-          removed: removed.has(m.participantId),
-        }));
-        return {
-          code,
-          name: family?.name ?? code,
-          memberCount: family?.memberIds.length ?? members.length,
-          submittedCount: memberViews.filter((m) => !m.removed).length,
-          members: memberViews,
-        };
-      }),
-    )
-  ).filter((f): f is AdminFamilyView => f !== null);
+  const allFamilies = await familiesIncludingLegacy(repo, indexedFamilies, entries);
+  const families: AdminFamilyView[] = await Promise.all(
+    allFamilies.map(async (family) => {
+      const members = await repo.submissionsForFamily(family.code);
+      const memberViews = members.map((m) => ({
+        participantId: m.participantId,
+        firstName: m.firstName,
+        role: m.role,
+        primary: m.primary,
+        removed: removed.has(m.participantId),
+      }));
+      return {
+        code: family.code,
+        name: family.name,
+        memberCount: family.memberIds.length,
+        submittedCount: memberViews.filter((m) => !m.removed).length,
+        members: memberViews,
+      };
+    }),
+  );
 
   // Post-moderation community counts. Subtract each removed participant's primary
   // from the live aggregates. Prefer their CURRENT primary (from family records,

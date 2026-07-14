@@ -39,6 +39,8 @@ export const LED_TIMING = {
   revealHold: 5000,
   /** How long a family reveal holds the screen. */
   familyHold: 8000,
+  /** How long one Family stays foregrounded on the ambient live wall. */
+  ambientFamilyHold: 10_000,
   /** Re-reveal throttle per family (≤ once / 3–5 min). */
   familyThrottle: 240_000,
   /** How long an admin Photo Moment holds. */
@@ -100,6 +102,8 @@ export interface LedStateResponse {
   /** First-join submissions appended since the requested cursor. */
   newSubmissions: Submission[];
   aggregates: Aggregates;
+  /** Participants currently joined to a Family, whether or not they submitted. */
+  joinedTotal: number;
   families: LedFamily[];
   /** Coarse admin mode (default "live"). */
   mode: AdminMode;
@@ -119,6 +123,7 @@ export interface RevealView {
 export interface FamilyView {
   code: string;
   name: string;
+  memberCount: number;
   members: LedFamilyMember[];
   /** `familyMix(members)` once ≥ 2 members have submitted, else null. */
   mix: FamilyMixResult | null;
@@ -131,7 +136,11 @@ export interface FamilyView {
  */
 export type LedDirective =
   | { mode: "welcome"; key: string; payload: Record<string, never> }
-  | { mode: "cluster-wall"; key: string; payload: { families: LedFamily[]; total: number } }
+  | {
+      mode: "cluster-wall";
+      key: string;
+      payload: { families: LedFamily[]; total: number; featuredFamilyCode: string };
+    }
   | { mode: "active-join"; key: string; payload: { reveal: RevealView; families: LedFamily[] } }
   | { mode: "family-mix"; key: string; payload: { family: FamilyView; families: LedFamily[] } }
   | { mode: "photo-moment"; key: string; payload: { family: FamilyView } }
@@ -166,6 +175,8 @@ interface Segment {
 export interface OrchestratorState {
   adminMode: AdminMode;
   aggregates: Aggregates;
+  /** Participants currently joined to a Family, including pending Quiz results. */
+  joinedTotal: number;
   families: LedFamily[];
   familyByCode: Record<string, LedFamily>;
   /** Pending individual reveals (first-join submissions not yet shown). */
@@ -184,6 +195,8 @@ export interface OrchestratorState {
   lastRevealAt: number;
   revealsSinceDashboard: number;
   lastDashboardAt: number;
+  /** Last Family foregrounded by the ambient live-wall rotation. */
+  lastAmbientFamilyCode: string | null;
   lastActivityAt: number;
 }
 
@@ -214,6 +227,7 @@ export function initialLedState(now: number): OrchestratorState {
   return {
     adminMode: "live",
     aggregates: { counts: zeroCounts(), total: 0 },
+    joinedTotal: 0,
     families: [],
     familyByCode: {},
     queue: [],
@@ -228,6 +242,7 @@ export function initialLedState(now: number): OrchestratorState {
     lastRevealAt: now - LED_TIMING.revealInterval,
     revealsSinceDashboard: 0,
     lastDashboardAt: now,
+    lastAmbientFamilyCode: null,
     lastActivityAt: now,
   };
 }
@@ -252,7 +267,13 @@ function familyView(family: LedFamily): FamilyView {
           family.members.map((m) => ({ primary: m.primary, role: m.role })),
         )
       : null;
-  return { code: family.code, name: family.name, members: family.members, mix };
+  return {
+    code: family.code,
+    name: family.name,
+    memberCount: family.memberCount,
+    members: family.members,
+    mix,
+  };
 }
 
 /**
@@ -284,6 +305,21 @@ function pickPhotoFamily(state: OrchestratorState): string | null {
   return best;
 }
 
+/** Next joined Family in stable API order for the ambient live-wall rotation. */
+function nextAmbientFamily(state: OrchestratorState): string | null {
+  let first: string | null = null;
+  let returnNext = state.lastAmbientFamilyCode === null;
+
+  for (const family of state.families) {
+    if (family.memberCount === 0) continue;
+    if (first === null) first = family.code;
+    if (returnNext) return family.code;
+    if (family.code === state.lastAmbientFamilyCode) returnNext = true;
+  }
+
+  return first;
+}
+
 function shouldDashboard(state: OrchestratorState, now: number): boolean {
   if (state.aggregates.total <= 0) return false;
   if (state.revealsSinceDashboard >= LED_TIMING.dashboardAfterReveals) return true;
@@ -303,6 +339,7 @@ function ingestPoll(
     ...state,
     adminMode: data.mode,
     aggregates: data.aggregates,
+    joinedTotal: data.joinedTotal,
     families: data.families,
     familyByCode: Object.fromEntries(data.families.map((f) => [f.code, f])),
   };
@@ -360,8 +397,11 @@ function chooseSegment(state: OrchestratorState, now: number): Choice {
       return { kind: "start", mode: "welcome", target: null };
     case "photo-moment": {
       const code = pickPhotoFamily(state);
-      return code
-        ? { kind: "start", mode: "photo-moment", target: code }
+      if (code) return { kind: "start", mode: "photo-moment", target: code };
+
+      const ambientFamily = nextAmbientFamily(state);
+      return ambientFamily
+        ? { kind: "start", mode: "cluster-wall", target: ambientFamily }
         : { kind: "start", mode: "welcome", target: null };
     }
     case "live":
@@ -398,15 +438,18 @@ function chooseSegment(state: OrchestratorState, now: number): Choice {
     return { kind: "start", mode: "active-join", target: null };
   }
 
-  // Quiet → Idle/Welcome (the join QR).
-  if (state.queue.length === 0 && now - state.lastActivityAt >= LED_TIMING.idleAfter) {
-    return { kind: "start", mode: "welcome", target: null };
+  // The ambient Family wall is Live's idle state. It keeps the join QR tucked
+  // in the corner and foregrounds each Family in stable round-robin order.
+  const ambientFamily = nextAmbientFamily(state);
+  if (ambientFamily) {
+    if (cur.mode === "cluster-wall" && elapsed < LED_TIMING.ambientFamilyHold) {
+      return { kind: "hold" };
+    }
+    return { kind: "start", mode: "cluster-wall", target: ambientFamily };
   }
 
-  // Base ambient live wall (or Welcome when nobody is on it yet).
-  return state.families.length > 0
-    ? { kind: "start", mode: "cluster-wall", target: null }
-    : { kind: "start", mode: "welcome", target: null };
+  // No submitted Family can populate the wall yet, so the full join QR remains.
+  return { kind: "start", mode: "welcome", target: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -469,8 +512,10 @@ function startSegment(
       next.revealsSinceDashboard = LED_TIMING.dashboardAfterReveals;
       break;
     }
-    case "welcome":
     case "cluster-wall":
+      next.lastAmbientFamilyCode = desired.target;
+      break;
+    case "welcome":
       break;
   }
 
@@ -482,13 +527,18 @@ function startSegment(
 // ---------------------------------------------------------------------------
 
 function baseDirective(state: OrchestratorState): LedDirective {
-  if (state.families.length === 0) {
+  const featuredFamilyCode = state.lastAmbientFamilyCode ?? nextAmbientFamily(state);
+  if (!featuredFamilyCode) {
     return { mode: "welcome", key: "welcome", payload: {} };
   }
   return {
     mode: "cluster-wall",
     key: "cluster-wall",
-    payload: { families: state.families, total: state.aggregates.total },
+    payload: {
+      families: state.families,
+      total: state.joinedTotal,
+      featuredFamilyCode,
+    },
   };
 }
 
@@ -497,12 +547,19 @@ function buildDirective(state: OrchestratorState, desired: Desired): LedDirectiv
     case "welcome":
       return { mode: "welcome", key: "welcome", payload: {} };
 
-    case "cluster-wall":
+    case "cluster-wall": {
+      const featuredFamilyCode = desired.target ?? nextAmbientFamily(state);
+      if (!featuredFamilyCode) return { mode: "welcome", key: "welcome", payload: {} };
       return {
         mode: "cluster-wall",
         key: "cluster-wall",
-        payload: { families: state.families, total: state.aggregates.total },
+        payload: {
+          families: state.families,
+          total: state.joinedTotal,
+          featuredFamilyCode,
+        },
       };
+    }
 
     case "active-join": {
       const sub = state.currentReveal;
@@ -540,7 +597,7 @@ function buildDirective(state: OrchestratorState, desired: Desired): LedDirectiv
         key: `stats:${state.lastDashboardAt}`,
         payload: {
           counts: state.aggregates.counts,
-          total: state.aggregates.total,
+          total: state.joinedTotal,
           familyCount: state.families.length,
         },
       };
@@ -550,7 +607,7 @@ function buildDirective(state: OrchestratorState, desired: Desired): LedDirectiv
       return {
         mode: "montage",
         key: `montage:${state.current.since}`,
-        payload: { count: montage.count, faces: montage.faces, total: state.aggregates.total },
+        payload: { count: montage.count, faces: montage.faces, total: state.joinedTotal },
       };
     }
   }

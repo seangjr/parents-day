@@ -135,6 +135,23 @@ describe("MemoryRepository", () => {
       const result = await repo.familyByCode("NOPE-22");
       expect(result).toBeNull();
     });
+
+    test("allFamilies returns every family in creation order before submissions exist", async () => {
+      const first = await repo.createFamily("Tan");
+      const second = await repo.createFamily("Lim");
+      await repo.joinFamily(second.code, "p1");
+
+      const families = await repo.allFamilies();
+      expect(
+        families.map(({ code, name, memberIds }) => ({ code, name, memberIds })),
+      ).toEqual([
+        { code: first.code, name: "Tan", memberIds: [] },
+        { code: second.code, name: "Lim", memberIds: ["p1"] },
+      ]);
+
+      families[1].memberIds.push("local-mutation");
+      expect((await repo.allFamilies())[1].memberIds).toEqual(["p1"]);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -254,6 +271,8 @@ describe("MemoryRepository", () => {
 
       const family = await repo.familyByCode(code);
       expect(family).toBeNull();
+
+      expect(await repo.allFamilies()).toEqual([]);
     });
   });
 });

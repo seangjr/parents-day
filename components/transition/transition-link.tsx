@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { forwardRef, type ComponentPropsWithoutRef, type MouseEvent } from "react";
+import { TEXT_LINK_CLASS, TextLinkContent } from "@/components/ui/text-link";
+import { cn } from "@/lib/cn";
 import { useTransitionRouter } from "./transition-provider";
 
-type TransitionLinkProps = Omit<ComponentPropsWithoutRef<typeof Link>, "href"> & {
+export type TransitionLinkProps = Omit<ComponentPropsWithoutRef<typeof Link>, "href"> & {
   href: string;
 };
 
@@ -45,3 +47,19 @@ export const TransitionLink = forwardRef<HTMLAnchorElement, TransitionLinkProps>
     );
   }
 );
+
+/** Transition-aware navigation wearing the shared inline text-link primitive. */
+export const TransitionTextLink = forwardRef<
+  HTMLAnchorElement,
+  TransitionLinkProps
+>(function TransitionTextLink({ className, children, ...props }, ref) {
+  return (
+    <TransitionLink
+      ref={ref}
+      className={cn(TEXT_LINK_CLASS, className)}
+      {...props}
+    >
+      <TextLinkContent>{children}</TextLinkContent>
+    </TransitionLink>
+  );
+});

@@ -61,6 +61,7 @@ function pollData(over: Partial<LedStateResponse> = {}): LedStateResponse {
     cursor: 0,
     newSubmissions: [],
     aggregates: aggregates(0),
+    joinedTotal: 0,
     families: [],
     mode: "live",
     ...over,
@@ -87,14 +88,44 @@ describe("boot + base modes", () => {
     expect(directive.mode).toBe("welcome");
   });
 
-  test("shows the cluster wall when families are present and active", () => {
-    // A single-member family: activity registered, but no reveal queued (< 2).
+  test("shows a joined Family before its first Quiz result", () => {
     const { state, directive } = poll(initialLedState(0), 0, {
-      families: [family("TAN", [{ firstName: "Sarah" }])],
+      joinedTotal: 1,
+      families: [family("TAN", [], 1)],
     });
     expect(directive.mode).toBe("cluster-wall");
+    if (directive.mode !== "cluster-wall") throw new Error("unreachable");
+    expect(directive.payload.featuredFamilyCode).toBe("TAN");
+    expect(directive.payload.total).toBe(1);
     expect(state.queue).toHaveLength(0);
     expect(state.familyRevealQueue).toHaveLength(0);
+  });
+
+  test("cycles ambient focus through Families in stable order", () => {
+    const started = poll(initialLedState(0), 0, {
+      families: [
+        family("TAN", [{ firstName: "Sarah" }]),
+        family("LEE", [{ firstName: "Aaron" }]),
+      ],
+    });
+    expect(started.directive.mode).toBe("cluster-wall");
+    if (started.directive.mode !== "cluster-wall") throw new Error("unreachable");
+    expect(started.directive.payload.featuredFamilyCode).toBe("TAN");
+
+    const held = tick(started.state, LED_TIMING.ambientFamilyHold - 1);
+    expect(held.directive.mode).toBe("cluster-wall");
+    if (held.directive.mode !== "cluster-wall") throw new Error("unreachable");
+    expect(held.directive.payload.featuredFamilyCode).toBe("TAN");
+
+    const next = tick(started.state, LED_TIMING.ambientFamilyHold);
+    expect(next.directive.mode).toBe("cluster-wall");
+    if (next.directive.mode !== "cluster-wall") throw new Error("unreachable");
+    expect(next.directive.payload.featuredFamilyCode).toBe("LEE");
+
+    const wrapped = tick(next.state, LED_TIMING.ambientFamilyHold * 2);
+    expect(wrapped.directive.mode).toBe("cluster-wall");
+    if (wrapped.directive.mode !== "cluster-wall") throw new Error("unreachable");
+    expect(wrapped.directive.payload.featuredFamilyCode).toBe("TAN");
   });
 
   test("falls back to Welcome when no families are on the wall yet", () => {
@@ -289,12 +320,12 @@ describe("flood / montage", () => {
 // ---------------------------------------------------------------------------
 
 describe("idle", () => {
-  test("drops to Welcome after a quiet spell even with families present", () => {
+  test("keeps the ambient Family wall live after a quiet spell", () => {
     const s = poll(initialLedState(0), 0, {
       families: [family("TAN", [{ firstName: "Sarah" }])],
     }).state;
     expect(tick(s, 1000).directive.mode).toBe("cluster-wall");
-    expect(tick(s, LED_TIMING.idleAfter + 1).directive.mode).toBe("welcome");
+    expect(tick(s, LED_TIMING.idleAfter + 1).directive.mode).toBe("cluster-wall");
   });
 });
 
@@ -362,13 +393,15 @@ describe("admin-forced modes", () => {
     expect(directive.payload.family.code).toBe("TAN");
   });
 
-  test("photo-moment with no eligible family falls back to Welcome", () => {
+  test("photo-moment with no eligible family keeps the ambient wall live", () => {
     const { directive } = poll(initialLedState(0), 0, {
       mode: "photo-moment",
       families: [family("TAN", [{ firstName: "Solo" }])],
       aggregates: aggregates(1),
     });
-    expect(directive.mode).toBe("welcome");
+    expect(directive.mode).toBe("cluster-wall");
+    if (directive.mode !== "cluster-wall") throw new Error("unreachable");
+    expect(directive.payload.featuredFamilyCode).toBe("TAN");
   });
 });
 

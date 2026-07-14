@@ -13,7 +13,7 @@ interface SplitRevealProps {
   /** Wrapper element — the DEFAULT reveal for Geist / Big Shoulders headings. */
   as?: ElementType;
   className?: string;
-  /** Split granularity. */
+  /** Split granularity. Defaults to the app-wide masked line reveal. */
   reveal?: SplitUnit;
   /** Per-unit reveal duration (s). Defaults tuned per granularity. */
   duration?: number;
@@ -31,17 +31,16 @@ const UNIT_DEFAULTS: Record<SplitUnit, { duration: number; stagger: number }> = 
 };
 
 /**
- * Osmo Masked Text Reveal (GSAP SplitText). Splits into lines/words/chars, masks
- * each unit, and slides them up into view on scroll. The `data-split` marker
- * drives the FOUC guard in globals.css; `data-split-reveal` carries the
- * granularity. Adapted to React `useEffect` with SplitText.revert +
- * ScrollTrigger.kill cleanup; honors `prefers-reduced-motion`.
+ * App-wide masked line reveal, with optional word/character granularity for
+ * deliberate display moments. The `data-split` marker drives the FOUC guard in
+ * globals.css; `data-split-reveal` carries the granularity. Adapted to React
+ * `useEffect` with SplitText cleanup and honors `prefers-reduced-motion`.
  */
 export function SplitReveal({
   children,
   as: Wrapper = "h2",
   className,
-  reveal = "words",
+  reveal = "lines",
   duration,
   stagger,
   start = "top 85%",
@@ -59,10 +58,8 @@ export function SplitReveal({
     const stag = stagger ?? timing.stagger;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      // Reduced-motion-safe: reveal with a gentle opacity fade only — no split,
-      // no vestibular slide — so the text still "arrives" instead of snapping.
       el.style.visibility = "visible";
-      gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" });
+      el.style.opacity = "1";
       return;
     }
 

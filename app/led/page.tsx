@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 /**
  * The foyer LED wall (ADR-0004). A fullscreen kiosk that polls `/api/led-state`
  * and reveals results live — individual joins, family mixes, the community
- * dashboard, photo moments — never blanking. Gated with `/admin` by the shared
- * secret in routing middleware (ADR-0006).
+ * dashboard, photo moments — never blanking. Gated with `/admin` by the
+ * six-digit event PIN in Next.js Proxy (ADR-0006).
  */
 export default function LedPage() {
   return <LedClient />;

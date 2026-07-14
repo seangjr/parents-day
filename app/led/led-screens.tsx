@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { LOVE_STYLES, LOVE_STYLE_LIST, type LoveStyleId } from "@/lib/love-styles";
 import { Pill } from "@/components/ui/pill";
 import { Odometer } from "@/components/animation/odometer";
+import { SplitReveal } from "@/components/animation/split-reveal";
 import { StatLabel } from "@/components/led/stat-label";
 import { RevealCard } from "@/components/led/reveal-card";
 import { CommunityDashboard } from "@/components/led/community-dashboard";
@@ -13,6 +14,7 @@ import {
   type FamilyMember,
 } from "@/components/led/family-constellation";
 import { PhotoMoment } from "@/components/led/photo-moment";
+import { RefractedBackground } from "@/components/led/refracted-background";
 import { LedQr } from "./led-qr";
 import type { LedDirective, LedFamily, LedFamilyMember } from "@/lib/led-orchestrator";
 
@@ -42,26 +44,42 @@ function Header() {
     <header className="absolute left-0 top-0 z-10 flex flex-col gap-3 pl-[5%] pt-[5%]">
       <div className="flex items-center gap-3">
         <Heart className="size-5 text-lime" aria-hidden />
-        <span className="font-condensed text-lg font-bold uppercase tracking-[0.2em] text-lime">
+        <SplitReveal as="span" className="font-condensed text-lg font-bold uppercase tracking-[0.2em] text-lime">
           Parents Day 2026
-        </span>
+        </SplitReveal>
       </div>
-      <span className="font-display text-7xl leading-none text-lime">Love Revealed</span>
+      <SplitReveal
+        as="span"
+        className="font-display text-7xl leading-none text-lime [&>div]:pr-[0.18em]"
+      >
+        Love Revealed
+      </SplitReveal>
     </header>
   );
 }
 
-function QrCallout() {
+function QrCallout({ compact }: { compact: boolean }) {
   return (
-    <div className="absolute bottom-[5%] right-[4%] z-10 flex flex-col items-center gap-4">
-      <LedQr pixels={320} className="size-52 p-3" />
-      <div className="flex flex-col items-center gap-1 text-center">
-        <span className="font-condensed text-xl font-bold uppercase tracking-wide text-lime">
+    <div
+      className={cn(
+        "absolute z-20 flex origin-bottom-right flex-col items-center gap-5 text-center",
+        "transition-[left,top,translate,scale] duration-1000 ease-smooth motion-reduce:transition-none",
+        compact
+          ? "left-[96%] top-[95%] -translate-x-full -translate-y-full scale-[0.72]"
+          : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 scale-100",
+      )}
+    >
+      <LedQr pixels={420} className="size-72 p-4 shadow-glow" />
+      <div className="flex flex-col items-center gap-2">
+        <SplitReveal
+          as="span"
+          className="font-condensed text-3xl font-bold uppercase tracking-wide text-lime"
+        >
           Scan to join the wall
-        </span>
-        <span className="text-base text-cream/70">
+        </SplitReveal>
+        <SplitReveal as="span" className="text-lg text-cream/70">
           Take the quiz. Find your family cluster.
-        </span>
+        </SplitReveal>
       </div>
     </div>
   );
@@ -87,6 +105,7 @@ function FamilyWall({ families, dim }: { families: LedFamily[]; dim?: boolean })
           <FamilyConstellation
             familyName={family.name}
             members={constellationMembers(family.members)}
+            memberCount={family.memberCount}
           />
         </div>
       ))}
@@ -94,10 +113,54 @@ function FamilyWall({ families, dim }: { families: LedFamily[]; dim?: boolean })
   );
 }
 
+/** Ambient Live view: one Family leads while the complete wall stays visible. */
+function AmbientFamilyWall({
+  families,
+  featuredFamilyCode,
+}: {
+  families: LedFamily[];
+  featuredFamilyCode: string;
+}) {
+  const featured = families.find((family) => family.code === featuredFamilyCode);
+  if (!featured) return <FamilyWall families={families} />;
+
+  return (
+    <>
+      <FamilyWall families={families} dim />
+      <div
+        key={featured.code}
+        className="absolute inset-0 flex motion-enter items-center justify-center"
+        style={{ animationDelay: "120ms" }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <Pill tint="#f0f4a6">Family on the wall</Pill>
+          <FamilyConstellation
+            familyName={featured.name}
+            members={constellationMembers(featured.members)}
+            memberCount={featured.memberCount}
+            className="w-[32rem]"
+          />
+          <span className="flex items-baseline gap-3 font-condensed text-lg font-bold uppercase tracking-[0.16em] text-sage">
+            <span className="inline-flex items-baseline gap-1">
+              <Odometer value={featured.memberCount} />
+              {featured.memberCount === 1 ? "member" : "members"} joined
+            </span>
+            <span aria-hidden>·</span>
+            <span className="inline-flex items-baseline gap-1">
+              <Odometer value={featured.members.length} />
+              {featured.members.length === 1 ? "result" : "results"} revealed
+            </span>
+          </span>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /** A compact per-style member tally for a family mix (LED 4). */
 function MixCounts({ counts }: { counts: Record<LoveStyleId, number> }) {
   return (
-    <div className="flex items-center gap-5">
+    <div className="motion-enter flex items-center gap-5" style={{ animationDelay: "240ms" }}>
       {LOVE_STYLE_LIST.filter((meta) => counts[meta.id] > 0).map((meta) => {
         const Icon = meta.icon;
         return (
@@ -107,7 +170,7 @@ function MixCounts({ counts }: { counts: Record<LoveStyleId, number> }) {
             style={{ color: meta.hex }}
           >
             <Icon className="size-4" aria-hidden />
-            {counts[meta.id]}
+            <Odometer value={counts[meta.id]} />
           </span>
         );
       })}
@@ -122,37 +185,30 @@ function MixCounts({ counts }: { counts: Record<LoveStyleId, number> }) {
 function Body({ directive }: { directive: LedDirective }) {
   switch (directive.mode) {
     case "welcome":
-      return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-8">
-          <LedQr pixels={420} className="size-72 p-4 shadow-glow" />
-          <div className="flex flex-col items-center gap-2 text-center">
-            <span className="font-condensed text-3xl font-bold uppercase tracking-wide text-lime">
-              Scan to join the wall
-            </span>
-            <span className="text-lg text-cream/70">
-              Take the quiz. Find your family cluster.
-            </span>
-          </div>
-        </div>
-      );
+      return null;
 
-    case "cluster-wall":
+    case "cluster-wall": {
+      const { families, total, featuredFamilyCode } = directive.payload;
       return (
         <>
-          <FamilyWall families={directive.payload.families} />
+          <AmbientFamilyWall
+            families={families}
+            featuredFamilyCode={featuredFamilyCode}
+          />
           <div className="absolute bottom-[6%] left-[5%] z-10 flex gap-12">
             <StatLabel
               label="People joined"
-              value={<Odometer value={directive.payload.total} />}
+              value={<Odometer value={total} />}
               accent="#f0f4a6"
             />
             <StatLabel
               label="Families on the wall"
-              value={<Odometer value={directive.payload.families.length} />}
+              value={<Odometer value={families.length} />}
             />
           </div>
         </>
       );
+    }
 
     case "active-join": {
       const { reveal, families } = directive.payload;
@@ -162,7 +218,7 @@ function Body({ directive }: { directive: LedDirective }) {
         <>
           <FamilyWall families={families} dim />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-            <Pill tint="#f0f4a6" className="animate-rise">
+            <Pill tint="#f0f4a6" className="motion-enter" style={{ animationDelay: "40ms" }}>
               Just joined
             </Pill>
             <div className="relative">
@@ -180,7 +236,10 @@ function Body({ directive }: { directive: LedDirective }) {
               />
             </div>
             {reveal.familyName ? (
-              <span className="font-condensed text-lg font-bold uppercase tracking-wide text-sage">
+              <span
+                className="motion-enter font-condensed text-lg font-bold uppercase tracking-wide text-sage"
+                style={{ animationDelay: "200ms" }}
+              >
                 Joining {reveal.familyName}
               </span>
             ) : null}
@@ -198,11 +257,15 @@ function Body({ directive }: { directive: LedDirective }) {
             <FamilyConstellation
               familyName={family.name}
               members={constellationMembers(family.members)}
+              memberCount={family.memberCount}
               className="w-[34rem]"
             />
             {family.mix ? (
               <>
-                <p className="max-w-3xl text-center font-display text-4xl leading-tight text-lime">
+                <p
+                  className="motion-enter max-w-3xl text-center font-display text-4xl leading-tight text-lime"
+                  style={{ animationDelay: "180ms" }}
+                >
                   {family.mix.headline}
                 </p>
                 <MixCounts counts={family.mix.counts} />
@@ -230,9 +293,12 @@ function Body({ directive }: { directive: LedDirective }) {
     case "stats":
       return (
         <div className="absolute left-[7%] top-1/2 flex w-[34rem] -translate-y-1/2 flex-col gap-8 rounded-[2rem] border border-lime/25 bg-shadow/80 p-12 backdrop-blur-xl">
-          <p className="font-display text-6xl leading-none text-lime">Today&apos;s Love Mix</p>
+          <SplitReveal as="p" className="font-display text-6xl leading-none text-lime">Today&apos;s Love Mix</SplitReveal>
           <CommunityDashboard counts={directive.payload.counts} />
-          <div className="flex flex-col gap-3 border-t border-lime/25 pt-4">
+          <div
+            className="motion-enter flex flex-col gap-3 border-t border-lime/25 pt-4"
+            style={{ animationDelay: "220ms" }}
+          >
             <span className="flex items-baseline gap-3">
               <Odometer
                 value={directive.payload.total}
@@ -242,8 +308,9 @@ function Body({ directive }: { directive: LedDirective }) {
                 people joined
               </span>
             </span>
-            <span className="font-condensed text-lg font-medium uppercase tracking-wide text-sage">
-              {directive.payload.familyCount} families connected
+            <span className="flex items-baseline gap-2 font-condensed text-lg font-medium uppercase tracking-wide text-sage">
+              <Odometer value={directive.payload.familyCount} />
+              <span>families connected</span>
             </span>
           </div>
         </div>
@@ -252,14 +319,17 @@ function Body({ directive }: { directive: LedDirective }) {
     case "montage":
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-10">
-          <div className="flex items-baseline gap-4">
+          <div
+            className="motion-enter flex items-baseline gap-4"
+            style={{ animationDelay: "100ms" }}
+          >
             <Odometer
               value={directive.payload.count}
               className="font-condensed text-8xl font-bold text-lime"
             />
-            <span className="font-condensed text-3xl font-bold uppercase tracking-wide text-cream">
+            <SplitReveal as="span" className="font-condensed text-3xl font-bold uppercase tracking-wide text-cream">
               people just joined
-            </span>
+            </SplitReveal>
           </div>
           <div className="flex max-w-4xl flex-wrap items-center justify-center gap-5">
             {directive.payload.faces.map((face, i) => {
@@ -268,8 +338,8 @@ function Body({ directive }: { directive: LedDirective }) {
               return (
                 <span
                   key={face.participantId}
-                  className="flex animate-rise flex-col items-center gap-2"
-                  style={{ animationDelay: `${i * 60}ms` }}
+                  className="motion-pop flex flex-col items-center gap-2"
+                  style={{ animationDelay: `${180 + i * 40}ms` }}
                 >
                   <span
                     className="flex size-16 items-center justify-center rounded-full border"
@@ -305,13 +375,14 @@ function Body({ directive }: { directive: LedDirective }) {
  */
 export function LedStage({ directive }: { directive: LedDirective }) {
   return (
-    <div className="fixed inset-0 overflow-hidden bg-olive-black font-body text-cream">
+    <div className="pointer-events-none fixed inset-0 cursor-none overflow-hidden bg-olive-black font-body text-cream">
+      <RefractedBackground />
       <BackgroundTextures />
       <Header />
-      <div key={directive.key} className="absolute inset-0">
+      <div key={directive.key} className="motion-scene absolute inset-0">
         <Body directive={directive} />
       </div>
-      {directive.mode === "welcome" ? null : <QrCallout />}
+      <QrCallout compact={directive.mode !== "welcome"} />
     </div>
   );
 }

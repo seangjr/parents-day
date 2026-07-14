@@ -51,13 +51,17 @@ export function WizardStep({
         {Array.from({ length: TOTAL_STEPS }, (_, i) => {
           const n = i + 1;
           const fill = n < step ? 1 : n === step ? clamped : 0;
+          const isCurrent = n === step;
           return (
             <span
               key={n}
               className="relative h-full flex-1 overflow-hidden rounded-full bg-moss"
             >
               <span
-                className="absolute inset-y-0 left-0 rounded-full bg-lime transition-[width] duration-500 ease-smooth"
+                className={cn(
+                  "absolute inset-y-0 left-0 rounded-full bg-lime transition-[width] duration-300 ease-smooth motion-reduce:transition-none",
+                  isCurrent && "shadow-glow",
+                )}
                 style={{ width: `${fill * 100}%` }}
               />
             </span>

@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { TransitionLink, useTransitionRouter } from "@/components/transition";
+import { TransitionTextLink, useTransitionRouter } from "@/components/transition";
 import { useParticipant } from "@/lib/participant";
 import { WizardStep } from "@/components/quiz/wizard-step";
 import type { FamilyView, JoinResponse } from "./types";
+import { SplitReveal } from "@/components/animation/split-reveal";
 
 /** The looked-up Family awaiting confirmation before we commit the join. */
 interface Pending {
@@ -58,11 +59,14 @@ export function JoinFamily() {
   // A scanned join-QR arrives as ?code=TAN-K7 — prefill and jump to confirm.
   useEffect(() => {
     const scanned = new URLSearchParams(window.location.search).get("code");
-    if (scanned) {
-      const value = scanned.trim().toUpperCase();
+    if (!scanned) return;
+
+    const value = scanned.trim().toUpperCase();
+    const timer = window.setTimeout(() => {
       setCode(value);
       void lookup(value);
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [lookup]);
 
   async function confirmJoin() {
@@ -124,7 +128,7 @@ export function JoinFamily() {
 
       {pending ? (
         <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-sage">You&rsquo;re joining</p>
+          <SplitReveal as="p" className="text-sage">You&rsquo;re joining</SplitReveal>
           <div className="flex items-center gap-3">
             <span aria-hidden className="h-px w-8 bg-lime" />
             <span className="font-display text-3xl leading-tight text-lime">
@@ -139,12 +143,9 @@ export function JoinFamily() {
         <Button type="submit" className="w-full" disabled={!codeValid || busy}>
           {busy ? (pending ? "Joining\u2026" : "Checking\u2026") : "Continue"}
         </Button>
-        <TransitionLink
-          href="/family/create"
-          className="mx-auto rounded-xs text-sm text-lime transition-colors duration-300 ease-smooth hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
-        >
+        <TransitionTextLink href="/family/create">
           Create a new family instead
-        </TransitionLink>
+        </TransitionTextLink>
       </div>
     </form>
   );

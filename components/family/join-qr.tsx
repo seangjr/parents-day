@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toDataURL } from "qrcode";
 import { cn } from "@/lib/cn";
+import { SplitReveal } from "@/components/animation/split-reveal";
 
 interface JoinQrProps {
   code: string;
@@ -54,9 +55,9 @@ export function JoinQr({ code, className }: JoinQrProps) {
           </div>
         )}
       </div>
-      <p className="text-center text-sm text-sage">
+      <SplitReveal as="p" className="text-center text-sm text-sage">
         Scan to join — or share the code.
-      </p>
+      </SplitReveal>
     </div>
   );
 }

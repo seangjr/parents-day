@@ -191,8 +191,11 @@ export function ParticipantProvider({ children }: { children: ReactNode }) {
   // Hydrate once on mount. The server render has no localStorage, so the first
   // client render matches it (empty id, not ready) — no hydration mismatch.
   useEffect(() => {
-    setParticipant(load());
-    setReady(true);
+    const timer = window.setTimeout(() => {
+      setParticipant(load());
+      setReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Persist every change after hydration.

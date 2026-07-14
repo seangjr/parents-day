@@ -29,10 +29,10 @@ export function RevealCard({
   return (
     <div
       className={cn(
-        "relative flex animate-rise flex-col items-center gap-6 overflow-hidden rounded-card border border-sage/20 bg-shadow/60 p-10 text-center",
+        "relative flex motion-enter flex-col items-center gap-6 overflow-hidden rounded-card border border-sage/20 bg-shadow/60 p-10 text-center",
         className,
       )}
-      style={{ boxShadow: `0 0 4rem ${meta.hex}22` }}
+      style={{ boxShadow: `0 0 4rem ${meta.hex}22`, animationDelay: "60ms" }}
     >
       <div
         aria-hidden
@@ -46,28 +46,35 @@ export function RevealCard({
         <img
           src={photoUrl}
           alt={name}
-          className="relative size-24 rounded-full object-cover"
-          style={{ boxShadow: `0 0 0 2px ${meta.hex}` }}
+          className="motion-pop relative size-24 rounded-full object-cover"
+          style={{ boxShadow: `0 0 0 2px ${meta.hex}`, animationDelay: "140ms" }}
         />
       ) : (
         <span
-          className="relative flex size-24 items-center justify-center rounded-full border"
+          className="motion-pop relative flex size-24 items-center justify-center rounded-full border"
           style={{
             color: meta.hex,
             borderColor: `${meta.hex}59`,
             backgroundColor: `${meta.hex}14`,
+            animationDelay: "140ms",
           }}
         >
           <Icon className="size-12" aria-hidden />
         </span>
       )}
-      <div className="relative flex flex-col items-center gap-2">
+      <div
+        className="motion-enter relative flex flex-col items-center gap-2"
+        style={{ animationDelay: "200ms" }}
+      >
         <span className="font-condensed text-5xl font-bold uppercase tracking-wide text-cream">
           {name}
         </span>
         <Pill tint={meta.hex}>{role}</Pill>
       </div>
-      <div className="relative flex flex-col items-center gap-1">
+      <div
+        className="motion-enter relative flex flex-col items-center gap-1"
+        style={{ animationDelay: "260ms" }}
+      >
         <span
           className="font-condensed text-2xl font-bold uppercase tracking-wide"
           style={{ color: meta.hex }}

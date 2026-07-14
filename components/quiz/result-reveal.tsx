@@ -8,10 +8,12 @@ import { scoreQuiz } from "@/lib/scoring";
 import {
   BUTTON_BASE,
   BUTTON_VARIANTS,
+  Button,
   ButtonContent,
 } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { FitText } from "@/components/fit-text";
+import { SplitReveal } from "@/components/animation/split-reveal";
 import { TransitionLink, useTransitionRouter } from "@/components/transition";
 import { WizardStep } from "./wizard-step";
 import { useParticipant } from "@/lib/participant";
@@ -68,60 +70,64 @@ export function ResultReveal() {
       <WizardStep step={4} label="Your Result" centered />
 
       <div className="flex flex-col items-center gap-4 text-center">
-        <p className="font-condensed text-sm font-bold uppercase tracking-[0.2em] text-sage">
+        <p className="motion-enter font-condensed text-sm font-bold uppercase tracking-[0.2em] text-sage">
           {participant.firstName
             ? `${participant.firstName}, your Love Style is`
             : "Your Love Style is"}
         </p>
-        <FitText as="h1" lineClassName="font-display leading-none" className="text-lime">
+        <FitText as="h1" lineClassName="font-display leading-none" className="motion-enter text-lime">
           {headline}
         </FitText>
         {result.hybridWith ? (
-          <Pill tint={LOVE_STYLES[result.hybridWith].hex}>
+          <Pill tint={LOVE_STYLES[result.hybridWith].hex} className="motion-enter" style={{ animationDelay: "60ms" }}>
             with a bit of {displayLabel(LOVE_STYLES[result.hybridWith])}
           </Pill>
         ) : null}
         <span
-          className="mt-2 flex size-20 items-center justify-center rounded-full border"
+          className="motion-pop mt-2 flex size-20 items-center justify-center rounded-full border"
           style={{
             color: primary.hex,
             borderColor: `${primary.hex}59`,
             backgroundColor: `${primary.hex}14`,
+            animationDelay: "140ms",
           }}
         >
           <Icon className="size-9" aria-hidden />
         </span>
       </div>
 
-      <p className="text-center text-base leading-relaxed text-cream">
+      <SplitReveal
+        as="p"
+        className="text-center text-base leading-relaxed text-cream"
+      >
         {copy.description}
-      </p>
+      </SplitReveal>
 
       {participant.family ? (
-        <div className="flex flex-col gap-2 rounded-card border border-moss bg-lime/5 p-5">
+        <div className="motion-enter flex flex-col gap-2 rounded-card border border-moss bg-lime/5 p-5" style={{ animationDelay: "200ms" }}>
           <p className="font-display text-xl text-lime">
             {participant.family.name}
           </p>
-          <p className="text-sm text-sage">
+          <SplitReveal as="p" className="text-sm text-sage">
             Your result will join your family cluster on the live wall.
-          </p>
+          </SplitReveal>
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-4">
+      <div className="motion-enter flex flex-col gap-4" style={{ animationDelay: "260ms" }}>
         <TransitionLink
           href="/submitted"
           className={cn(BUTTON_BASE, BUTTON_VARIANTS.primary, "w-full")}
         >
           <ButtonContent>Reveal on Wall</ButtonContent>
         </TransitionLink>
-        <button
-          type="button"
+        <Button
+          variant="text"
           onClick={handleRetake}
-          className="mx-auto rounded-xs text-sm text-lime/70 underline underline-offset-4 transition-colors duration-300 ease-smooth hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
+          className="mx-auto"
         >
           Retake quiz
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -9,11 +9,12 @@ import {
   ButtonContent,
 } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { TransitionLink } from "@/components/transition";
+import { TransitionLink, TransitionTextLink } from "@/components/transition";
 import { useParticipant } from "@/lib/participant";
 import { WizardStep } from "@/components/quiz/wizard-step";
 import { CodeDisplay } from "./code-display";
 import type { CreateResponse } from "./types";
+import { SplitReveal } from "@/components/animation/split-reveal";
 
 /**
  * Step 1 of 4 — Create Family (Figma Mobile 3). A family surname mints a server
@@ -86,14 +87,14 @@ export function CreateFamily() {
 
       {code ? (
         <div className="flex flex-col items-center gap-5 rounded-card border border-lime/40 bg-lime/10 p-8 text-center shadow-glow backdrop-blur-sm">
-          <p className="font-condensed text-sm font-bold uppercase tracking-wide text-sage">
+          <SplitReveal as="p" className="font-condensed text-sm font-bold uppercase tracking-wide text-sage">
             Your family code
-          </p>
+          </SplitReveal>
           <CodeDisplay code={code} />
-          <p className="text-sm leading-relaxed text-sage">
+          <SplitReveal as="p" className="text-sm leading-relaxed text-sage">
             Share this code with your family members so their results join the
             same cluster.
-          </p>
+          </SplitReveal>
         </div>
       ) : null}
 
@@ -114,12 +115,9 @@ export function CreateFamily() {
             {busy ? "Creating\u2026" : "Create family"}
           </Button>
         )}
-        <TransitionLink
-          href="/family/join"
-          className="mx-auto rounded-xs text-sm text-lime transition-colors duration-300 ease-smooth hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
-        >
+        <TransitionTextLink href="/family/join">
           I already have a code
-        </TransitionLink>
+        </TransitionTextLink>
       </div>
     </div>
   );

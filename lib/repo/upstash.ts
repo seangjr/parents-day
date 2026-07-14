@@ -14,6 +14,7 @@ import type {
 const AGG_PREFIX = "agg:";
 const FAMILY_PREFIX = "family:";
 const SUB_PREFIX = "sub:";
+const FAMILY_INDEX_KEY = "families:index";
 const LOG_KEY = "log";
 
 /** Shape of a Family stored as a Redis hash (Upstash serializes each field). */
@@ -26,9 +27,9 @@ type FamilyHash = {
 
 /**
  * Upstash Redis Repository (ADR-0001) — the production source of truth.
- * Keys: `agg:<style>` counters, `family:<code>` hash, `sub:<id>` record,
- * and the `log` list. The client is constructed lazily so importing this
- * module never requires the env to be present.
+ * Keys: `agg:<style>` counters, `family:<code>` hash, `families:index`
+ * creation-order sorted set, `sub:<id>` record, and the `log` list. The client
+ * is constructed lazily so importing this module never requires env presence.
  */
 export class UpstashRepository implements Repository {
   private client: Redis | null = null;
@@ -66,12 +67,16 @@ export class UpstashRepository implements Repository {
     while (await redis.exists(`${FAMILY_PREFIX}${code}`)) {
       code = mintFamilyCode(name);
     }
-    await redis.hset(`${FAMILY_PREFIX}${code}`, {
+    const createdTs = Date.now();
+    const pipeline = redis.pipeline();
+    pipeline.hset(`${FAMILY_PREFIX}${code}`, {
       code,
       name,
       memberIds: [] as string[],
-      createdTs: Date.now(),
+      createdTs,
     });
+    pipeline.zadd(FAMILY_INDEX_KEY, { score: createdTs, member: code });
+    await pipeline.exec();
     return { code };
   }
 
@@ -82,13 +87,23 @@ export class UpstashRepository implements Repository {
     const family = await this.familyByCode(code);
     if (!family) return { ok: false, error: "not_found" };
     if (family.memberIds.includes(participantId)) {
+      await this.redis().zadd(FAMILY_INDEX_KEY, {
+        score: family.createdTs,
+        member: code,
+      });
       return { ok: true, family };
     }
     if (family.memberIds.length >= MAX_FAMILY_SIZE) {
       return { ok: false, error: "full" };
     }
     const memberIds = [...family.memberIds, participantId];
-    await this.redis().hset(`${FAMILY_PREFIX}${code}`, { memberIds });
+    const pipeline = this.redis().pipeline();
+    pipeline.hset(`${FAMILY_PREFIX}${code}`, { memberIds });
+    pipeline.zadd(FAMILY_INDEX_KEY, {
+      score: family.createdTs,
+      member: code,
+    });
+    await pipeline.exec();
     return { ok: true, family: { ...family, memberIds } };
   }
 
@@ -103,6 +118,29 @@ export class UpstashRepository implements Repository {
       memberIds: raw.memberIds ?? [],
       createdTs: Number(raw.createdTs),
     };
+  }
+
+  async allFamilies(): Promise<Family[]> {
+    const redis = this.redis();
+    const codes = await redis.zrange<string[]>(FAMILY_INDEX_KEY, 0, -1);
+    if (codes.length === 0) return [];
+
+    const pipeline = redis.pipeline();
+    for (const code of codes) {
+      pipeline.hgetall(`${FAMILY_PREFIX}${code}`);
+    }
+    const stored = await pipeline.exec<(FamilyHash | null)[]>();
+    const families: Family[] = [];
+    stored.forEach((raw, index) => {
+      if (!raw || Object.keys(raw).length === 0) return;
+      families.push({
+        code: codes[index],
+        name: raw.name,
+        memberIds: raw.memberIds ?? [],
+        createdTs: Number(raw.createdTs),
+      });
+    });
+    return families;
   }
 
   async submissionsForFamily(code: string): Promise<Submission[]> {

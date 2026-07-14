@@ -11,10 +11,9 @@ Isolated git worktree on branch `fix/cleanup`. Small, targeted fixes from the co
    - `components/led/reveal-card.tsx` (~L75)
 2. **Glossary** — `components/family/choose-family.tsx`: "family group" → "Family"
    (CONTEXT.md `_Avoid_: Family group`). Fix both occurrences in the copy.
-3. **`proxy.ts` fail-closed in production** — currently `if (!secret) return NextResponse.next()`
-   (open). Change so that when `process.env.NODE_ENV === "production"` AND `ADMIN_SECRET` is unset,
-   it DENIES (return the 401 gate) rather than opening — the Reset action is destructive. Keep dev
-   fail-open (unset secret in non-production stays open).
+3. **`proxy.ts` fail-closed in production** — when `process.env.NODE_ENV === "production"` AND
+   `ADMIN_PIN` is unset or malformed, deny with the 401 PIN gate rather than opening. Keep dev
+   fail-open only when the PIN is entirely unset in non-production.
 
 ## DO NOT TOUCH
 - `app/diag/` and the `dangerouslySetInnerHTML` blocks in `app/page.tsx` / `app/(experience)/layout.tsx`

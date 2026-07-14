@@ -15,6 +15,7 @@ import { CodeDisplay } from "./code-display";
 import { JoinQr } from "./join-qr";
 import { MixBar } from "./mix-bar";
 import type { FamilyView } from "./types";
+import { SplitReveal } from "@/components/animation/split-reveal";
 
 /** How often the mix re-fetches so late joins/reveals appear live (ADR-0002). */
 const POLL_MS = 5000;
@@ -50,9 +51,12 @@ export function FamilyMix({ code }: { code: string }) {
   }, [code]);
 
   useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(), POLL_MS);
-    return () => window.clearInterval(timer);
+    const initial = window.setTimeout(() => void load(), 0);
+    const interval = window.setInterval(() => void load(), POLL_MS);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
   }, [load]);
 
   if (status === "loading") {
@@ -84,9 +88,9 @@ export function FamilyMix({ code }: { code: string }) {
   return (
     <div className="flex flex-1 flex-col gap-8 py-4">
       <header className="flex flex-col items-center gap-3 text-center">
-        <span className="font-condensed text-sm font-bold uppercase tracking-[0.3em] text-lime">
+        <SplitReveal as="span" className="font-condensed text-sm font-bold uppercase tracking-[0.3em] text-lime">
           Family Love Mix
-        </span>
+        </SplitReveal>
         <h1 className="font-condensed text-3xl font-bold uppercase tracking-wide text-cream">
           {view.name}
         </h1>

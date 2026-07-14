@@ -1,4 +1,5 @@
 import { getRepo } from "@/lib/repo";
+import { familiesIncludingLegacy } from "@/lib/repo/family-list";
 import { LOVE_STYLE_ORDER, type LoveStyleId } from "@/lib/love-styles";
 import type { AdminMode, LedFamily, LedStateResponse } from "@/lib/led-orchestrator";
 import { readAdminState } from "@/app/api/admin/store";
@@ -43,11 +44,12 @@ export async function GET(request: Request): Promise<Response> {
   const cursor = Number.isFinite(rawCursor) && rawCursor > 0 ? Math.floor(rawCursor) : 0;
   const repo = getRepo();
 
-  const [aggregates, log, { mode, removed }] = await Promise.all([
+  const [aggregates, log, indexedFamilies, { mode, removed }] = await Promise.all([
     repo.aggregates(),
-    // The whole log: its head is the next cursor, and its family codes enumerate
-    // the wall. The delta the client hasn't seen is everything past `cursor`.
+    // The whole log supplies the next cursor and first-submission delta. Family
+    // enumeration comes from the explicit index, with the log as a legacy bridge.
     repo.submissionLog(0),
+    repo.allFamilies(),
     readAdminCoarse(),
   ]);
 
@@ -58,35 +60,24 @@ export async function GET(request: Request): Promise<Response> {
   // first-join reveal delta so a hidden name never animates in.
   const newSubmissions = entries.slice(start).filter((e) => !removed.has(e.participantId));
 
-  // Distinct family codes in first-seen order — the families on the wall.
-  const codes: string[] = [];
-  const seen = new Set<string>();
-  for (const entry of entries) {
-    if (entry.familyCode && !seen.has(entry.familyCode)) {
-      seen.add(entry.familyCode);
-      codes.push(entry.familyCode);
-    }
-  }
+  const allFamilies = await familiesIncludingLegacy(repo, indexedFamilies, entries);
 
-  // Hydrate each family once; keep the raw submissions to compute post-moderation
-  // counts, then project members to the LED shape with removed participants dropped.
-  const hydrated = (
-    await Promise.all(
-      codes.map(async (code) => {
-        const [family, members] = await Promise.all([
-          repo.familyByCode(code),
-          repo.submissionsForFamily(code),
-        ]);
-        if (!family && members.length === 0) return null;
-        return { code, family, members };
-      }),
-    )
-  ).filter((f): f is NonNullable<typeof f> => f !== null);
+  // A Family reaches the wall as soon as its first participant joins. Submitted
+  // members add named love-style nodes later; joined members without a result are
+  // represented by anonymous pending nodes in the LED component.
+  const hydrated = await Promise.all(
+    allFamilies
+      .filter((family) => family.memberIds.length > 0)
+      .map(async (family) => ({
+        family,
+        members: await repo.submissionsForFamily(family.code),
+      })),
+  );
 
-  const families: LedFamily[] = hydrated.map(({ code, family, members }) => ({
-    code,
-    name: family?.name ?? code,
-    memberCount: family?.memberIds.length ?? members.length,
+  const families: LedFamily[] = hydrated.map(({ family, members }) => ({
+    code: family.code,
+    name: family.name,
+    memberCount: family.memberIds.filter((id) => !removed.has(id)).length,
     members: members
       .filter((m) => !removed.has(m.participantId))
       .map((m) => ({ firstName: m.firstName, role: m.role, primary: m.primary })),
@@ -112,11 +103,13 @@ export async function GET(request: Request): Promise<Response> {
     if (primary) counts[primary] = Math.max(0, counts[primary] - 1);
   }
   const total = LOVE_STYLE_ORDER.reduce((sum, id) => sum + counts[id], 0);
+  const joinedTotal = families.reduce((sum, family) => sum + family.memberCount, 0);
 
   const body: LedStateResponse = {
     cursor: head,
     newSubmissions,
     aggregates: { counts, total },
+    joinedTotal,
     families,
     mode,
   };

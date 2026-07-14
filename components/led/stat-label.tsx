@@ -13,12 +13,12 @@ interface StatLabelProps {
 export function StatLabel({ label, value, accent, className }: StatLabelProps) {
   return (
     <div className={cn("flex flex-col gap-1", className)}>
-      <span className="font-condensed text-xs font-bold uppercase tracking-widest text-sage">
+      <span className="motion-enter font-condensed text-xs font-bold uppercase tracking-widest text-sage">
         {label}
       </span>
       <span
-        className="font-condensed text-3xl font-bold leading-none text-cream"
-        style={accent ? { color: accent } : undefined}
+        className="motion-pop font-condensed text-3xl font-bold leading-none text-cream"
+        style={{ color: accent, animationDelay: "60ms" }}
       >
         {value}
       </span>

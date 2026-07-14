@@ -56,6 +56,13 @@ export class MemoryRepository implements Repository {
     return { ...family, memberIds: [...family.memberIds] };
   }
 
+  async allFamilies(): Promise<Family[]> {
+    return Array.from(this.families.values(), (family) => ({
+      ...family,
+      memberIds: [...family.memberIds],
+    }));
+  }
+
   async submissionsForFamily(code: string): Promise<Submission[]> {
     const family = this.families.get(code);
     if (!family) return [];

@@ -1,87 +1,104 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Shared-secret gate (ADR-0006). Gates `/admin`, `/led`, and their APIs behind
- * a single `ADMIN_SECRET`; participant routes stay open. This is the Next 16
- * "Routing Middleware" — the `middleware` convention was deprecated and renamed
- * to `proxy` in v16, so the file lives at the project root as `proxy.ts`.
+ * Six-digit event PIN gate (ADR-0006). Gates `/admin`, `/led`, and their APIs
+ * behind one `ADMIN_PIN`; participant routes stay open. This is the Next 16
+ * `proxy` convention at the project root.
  *
- * Auth handshake: a valid `?key=<secret>` mints an httpOnly cookie and redirects
- * to a clean URL (keeping the secret out of history / referer); thereafter the
- * cookie carries the operator — and the LED kiosk's `/api/led-state` polls —
- * through. In development an unset `ADMIN_SECRET` leaves the gate open, matching
- * the repo's dev fallbacks (`getRepo` → in-memory, `led-state` → "live") so the
- * console is usable locally without config. In production an unset secret fails
- * CLOSED (denies): the Reset action is destructive, so a misconfigured deploy
- * must never expose the console.
+ * A valid form POST mints an httpOnly cookie and redirects with 303 to the
+ * requested page. The PIN never enters the URL, browser history, or referrer.
+ * Development remains open when `ADMIN_PIN` is unset; production fails closed
+ * for every matched admin and LED surface.
  *
  * NOT Vercel Deployment Protection, which would also lock out participants
  * (ADR-0006): the gate is route-scoped in `config.matcher` by design.
  */
 
-/** Cookie holding the shared secret once exchanged (httpOnly bearer). */
-const COOKIE = "pd_admin";
+/** Cookie carrying the accepted event PIN for the duration of the event. */
+const COOKIE = "pd_access";
+const PIN_PATTERN = /^\d{6}$/;
 /** Cookie lifetime — comfortably covers a single event day. */
 const MAX_AGE = 60 * 60 * 12;
 
-export function proxy(request: NextRequest): NextResponse {
-  const secret = process.env.ADMIN_SECRET;
+export async function proxy(request: NextRequest): Promise<NextResponse> {
+  const pin = process.env.ADMIN_PIN;
+  const path = request.nextUrl.pathname;
 
-  // No secret configured: fail-OPEN in dev, and always for the read-only LED
-  // wall — a missing secret must never blank the public projector. Fail-CLOSED
-  // only for the destructive admin surface (/admin, /api/admin) in production,
-  // where an unset ADMIN_SECRET must deny rather than expose Reset (ADR-0006).
-  if (!secret) {
-    const path = request.nextUrl.pathname;
-    const isAdmin = path.startsWith("/admin") || path.startsWith("/api/admin");
-    if (process.env.NODE_ENV === "production" && isAdmin) {
+  // Local development remains convenient without configuration. Production
+  // denies every matched admin and LED surface when the PIN is missing.
+  if (!pin) {
+    if (process.env.NODE_ENV === "production") {
       return unauthorized(path);
     }
     return NextResponse.next();
   }
 
-  const url = request.nextUrl;
+  // A configured credential that is not exactly six digits is a closed gate,
+  // never an accidental bypass.
+  if (!PIN_PATTERN.test(pin)) {
+    return unauthorized(path);
+  }
+
   const cookie = request.cookies.get(COOKIE)?.value;
-  const queryKey = url.searchParams.get("key");
-
-  // Already authorised by cookie — just strip any lingering `key` from the URL.
-  if (cookie === secret) {
-    if (queryKey === null) return NextResponse.next();
-    const clean = url.clone();
-    clean.searchParams.delete("key");
-    return NextResponse.redirect(clean);
+  if (cookie === pin) {
+    return NextResponse.next();
   }
 
-  // Valid key presented → set the cookie and bounce to the clean URL.
-  if (queryKey === secret) {
-    const clean = url.clone();
-    clean.searchParams.delete("key");
-    const res = NextResponse.redirect(clean);
-    res.cookies.set(COOKIE, secret, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: MAX_AGE,
-    });
-    return res;
+  const isPagePinSubmission =
+    request.method === "POST" && !path.startsWith("/api/");
+  if (isPagePinSubmission) {
+    let submittedPin: FormDataEntryValue | null = null;
+    try {
+      submittedPin = (await request.formData()).get("pin");
+    } catch {
+      // A malformed form is handled exactly like an incorrect PIN.
+    }
+
+    if (submittedPin === pin) {
+      const response = NextResponse.redirect(request.nextUrl, 303);
+      response.cookies.set(COOKIE, pin, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: MAX_AGE,
+      });
+      return response;
+    }
+
+    return unauthorized(path, true);
   }
 
-  // Unauthorised: APIs get a terse 401 JSON; pages get a minimal key form.
-  return unauthorized(url.pathname);
+  return unauthorized(path);
 }
 
 /**
- * The unauthorised response: APIs get a terse 401 JSON; pages get a minimal
- * no-JS key form. Both carry 401 so callers can distinguish the gate.
+ * APIs receive terse JSON; pages receive the no-JS PIN form. Both carry 401 so
+ * callers can distinguish the gate from the protected route.
  */
-function unauthorized(pathname: string): NextResponse {
+function unauthorized(pathname: string, invalidPin = false): NextResponse {
+  const securityHeaders = {
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+  };
+
   if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "unauthorized" },
+      { status: 401, headers: securityHeaders },
+    );
   }
-  return new NextResponse(gateHtml(pathname), {
+
+  return new NextResponse(gateHtml(pathname, invalidPin), {
     status: 401,
-    headers: { "content-type": "text/html; charset=utf-8" },
+    headers: {
+      ...securityHeaders,
+      "Content-Security-Policy":
+        "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "content-type": "text/html; charset=utf-8",
+    },
   });
 }
 
@@ -95,40 +112,84 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * A no-JS access-key page. Submitting the GET form appends `?key=…` to the
- * current path, which the proxy validates and exchanges for the cookie.
+ * No-JS PIN page. POST keeps the credential out of the URL and lets the proxy
+ * exchange it directly for the protected cookie.
  */
-function gateHtml(pathname: string): string {
+function gateHtml(pathname: string, invalidPin: boolean): string {
   const action = escapeHtml(pathname);
+  const error = invalidPin
+    ? '<p class="error" id="pin-error" role="alert">That PIN didn’t match. Try again.</p>'
+    : "";
+  const describedBy = invalidPin ? "pin-help pin-error" : "pin-help";
+
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="robots" content="noindex" />
+<meta name="robots" content="noindex, nofollow" />
 <title>Love Revealed — Staff access</title>
 <style>
+  @font-face { font-family: "Oooh Baby"; src: url("/fonts/OoohBaby-Regular.ttf") format("truetype"); font-display: swap; }
   :root { color-scheme: dark; }
-  body { margin: 0; min-height: 100dvh; display: grid; place-items: center;
-    font-family: system-ui, sans-serif; background: #10150F; color: #F7F1C8; }
-  form { display: flex; flex-direction: column; gap: 1rem; width: min(22rem, 90vw);
-    padding: 2rem; border: 1px solid rgba(168,173,130,0.3); border-radius: 1rem;
-    background: rgba(5,7,5,0.6); }
-  h1 { margin: 0; font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: #F0F4A6; }
-  p { margin: 0; font-size: 0.875rem; color: #A8AD82; }
-  input { padding: 0.75rem 1rem; border-radius: 0.375rem; border: 1px solid rgba(168,173,130,0.3);
-    background: rgba(5,7,5,0.6); color: #F7F1C8; font-size: 1rem; }
-  button { padding: 0.75rem 1rem; border-radius: 0.375rem; border: 0; cursor: pointer;
-    background: #F0F4A6; color: #10150F; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem;
+    font-family: ui-sans-serif, system-ui, sans-serif; background:
+      radial-gradient(circle at 18% 8%, rgba(104,115,76,.28), transparent 34rem),
+      radial-gradient(circle at 82% 92%, rgba(62,75,47,.32), transparent 32rem), #10150F;
+    color: #F7F1C8; -webkit-font-smoothing: antialiased; }
+  main { width: min(25rem, 100%); }
+  form { display: flex; flex-direction: column; gap: 1.25rem; padding: 2rem;
+    border: 1px solid rgba(240,244,166,.2); border-radius: 1.5rem;
+    background: rgba(5,7,5,.72); box-shadow: 0 1.5rem 5rem rgba(0,0,0,.38);
+    backdrop-filter: blur(1rem); }
+  header { display: flex; flex-direction: column; gap: .35rem; text-align: center; }
+  .wordmark { margin: 0; font-family: "Oooh Baby", cursive; font-size: 3rem;
+    font-weight: 400; line-height: 1; color: #F0F4A6; text-wrap: balance; }
+  .eyebrow { margin: 0; font-size: .75rem; font-weight: 750; letter-spacing: .18em;
+    text-transform: uppercase; color: #A8AD82; }
+  .field { display: flex; flex-direction: column; gap: .65rem; }
+  label { font-size: .8125rem; font-weight: 700; letter-spacing: .08em;
+    text-align: center; text-transform: uppercase; color: #F7F1C8; }
+  .hint { margin: 0; font-size: .8125rem; line-height: 1.5; text-align: center; color: #A8AD82; }
+  .error { margin: 0; border-radius: .5rem; padding: .65rem .75rem;
+    background: rgba(255,218,185,.1); color: #FFDAB9; font-size: .8125rem; text-align: center; }
+  input { width: 100%; min-height: 4rem; padding: .7rem .8rem .7rem 1.15rem;
+    border: 1px solid rgba(168,173,130,.42); border-radius: .75rem;
+    background: rgba(16,21,15,.88); color: #F0F4A6; caret-color: #F0F4A6;
+    font: 700 2rem/1 ui-monospace, monospace; font-variant-numeric: tabular-nums;
+    letter-spacing: .38em; text-align: center; }
+  input::placeholder { color: rgba(168,173,130,.38); }
+  input:focus-visible { outline: 2px solid #F0F4A6; outline-offset: 3px; }
+  input[aria-invalid="true"] { border-color: #FFDAB9; }
+  button { min-height: 3rem; padding: .8rem 1rem; border: 0; border-radius: .75rem;
+    cursor: pointer; background: #F0F4A6; color: #10150F; font-size: .875rem;
+    font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    transition: transform .18s ease, background-color .18s ease; }
+  button:hover { background: #F7F1C8; }
+  button:active { transform: scale(.96); }
+  button:focus-visible { outline: 2px solid #F7F1C8; outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { button { transition: none; } }
 </style>
 </head>
 <body>
-<form method="GET" action="${action}">
-  <h1>Staff access</h1>
-  <p>Enter the event access key to reach this screen.</p>
-  <input type="password" name="key" placeholder="Access key" autofocus autocomplete="current-password" required />
-  <button type="submit">Enter</button>
-</form>
+<main>
+  <form method="POST" action="${action}">
+    <header>
+      <p class="eyebrow">Parents Day 2026</p>
+      <h1 class="wordmark">Love Revealed</h1>
+    </header>
+    <div class="field">
+      <label for="pin">6-digit event PIN</label>
+      <input id="pin" type="password" name="pin" inputmode="numeric" pattern="[0-9]{6}"
+        minlength="6" maxlength="6" autocomplete="one-time-code" placeholder="••••••"
+        aria-describedby="${describedBy}"${invalidPin ? ' aria-invalid="true"' : ""} autofocus required />
+      <p class="hint" id="pin-help">Enter the staff PIN to open this screen.</p>
+      ${error}
+    </div>
+    <button type="submit">Unlock screen</button>
+  </form>
+</main>
 </body>
 </html>`;
 }
@@ -142,5 +203,7 @@ export const config = {
     "/api/admin/:path*",
     "/api/led-state",
     "/api/led-state/:path*",
+    "/api/led-background",
+    "/api/led-background/:path*",
   ],
 };

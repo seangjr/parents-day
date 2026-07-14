@@ -5,6 +5,7 @@ import {
   BUTTON_VARIANTS,
   ButtonContent,
 } from "@/components/ui/button";
+import { SplitReveal } from "@/components/animation/split-reveal";
 import { WizardStep } from "@/components/quiz/wizard-step";
 
 /**
@@ -18,12 +19,12 @@ export function ChooseFamily() {
       <WizardStep step={1} label="Join your family" />
 
       <div className="flex flex-col gap-4">
-        <h1 className="font-display text-5xl leading-tight text-lime">
-          Create or join a Family
-        </h1>
-        <p className="leading-relaxed text-cream">
-          Your results will be grouped together on the live wall.
-        </p>
+      <SplitReveal as="h1" className="font-display text-5xl leading-tight text-lime">
+        Create or join a Family
+      </SplitReveal>
+      <SplitReveal as="p" className="leading-relaxed text-cream">
+        Your results will be grouped together on the live wall.
+      </SplitReveal>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -55,10 +56,10 @@ function ChoiceCard({ title, body, action, href }: ChoiceCardProps) {
   return (
     <div className="flex flex-col gap-5 rounded-card border border-lime/40 bg-lime/10 p-6 backdrop-blur-sm">
       <div className="flex flex-col gap-2">
-        <h2 className="font-condensed text-xl font-bold uppercase tracking-wide text-lime">
+        <SplitReveal as="h2" className="font-condensed text-xl font-bold uppercase tracking-wide text-lime">
           {title}
-        </h2>
-        <p className="text-sm leading-relaxed text-sage">{body}</p>
+        </SplitReveal>
+        <SplitReveal as="p" className="text-sm leading-relaxed text-sage">{body}</SplitReveal>
       </div>
       <TransitionLink
         href={href}

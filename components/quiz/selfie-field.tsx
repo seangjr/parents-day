@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import { Camera, RefreshCw, Trash2 } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
 
 /** Cap the stored selfie so the data URL stays small enough for localStorage. */
 const MAX_DIMENSION = 512;
@@ -83,43 +83,42 @@ export function SelfieField({ value, onChange }: SelfieFieldProps) {
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            key={value}
             src={value}
             alt="Your selfie"
-            className="size-16 shrink-0 rounded-card border border-sage/30 object-cover"
+            className="motion-pop size-16 shrink-0 rounded-card border border-sage/30 object-cover"
           />
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              variant="surface"
               onClick={() => inputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-xs border border-sage/30 px-3 py-1.5 text-sm text-sage transition-colors duration-300 ease-smooth hover:border-sage/60 hover:text-cream"
+              className="gap-1.5 rounded-xs px-3 py-1.5 text-sm text-sage hover:bg-transparent hover:text-cream"
             >
               <RefreshCw className="size-4" aria-hidden />
               Retake
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="danger"
               onClick={() => onChange(null)}
-              className="inline-flex items-center gap-1.5 rounded-xs border border-sage/30 px-3 py-1.5 text-sm text-sage transition-colors duration-300 ease-smooth hover:border-peach/60 hover:text-peach"
+              className="gap-1.5"
             >
               <Trash2 className="size-4" aria-hidden />
               Remove
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="surface"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className={cn(
-            "flex items-center gap-3 rounded-card border border-dashed border-sage/40 p-4 text-left text-sage transition-colors duration-300 ease-smooth hover:border-sage/70 hover:text-cream disabled:opacity-50",
-          )}
+          className="w-full justify-start gap-3 border-dashed border-sage/40 px-4 py-4 text-sage hover:border-sage/70 hover:bg-transparent hover:text-cream"
         >
           <Camera className="size-5 shrink-0" aria-hidden />
           <span>{busy ? "Adding photo…" : "Add a selfie"}</span>
-        </button>
+        </Button>
       )}
-      {error ? <p className="text-sm text-peach">{error}</p> : null}
+      {error ? <p className="motion-enter text-sm text-peach">{error}</p> : null}
     </div>
   );
 }

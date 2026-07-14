@@ -34,6 +34,12 @@ export interface Repository {
   familyByCode(code: string): Promise<Family | null>;
 
   /**
+   * List every Family in creation order, including Families whose members have
+   * not completed a Quiz yet. Backed by an explicit Redis index — never SCAN.
+   */
+  allFamilies(): Promise<Family[]>;
+
+  /**
    * Submissions for the current members of a Family (members without a
    * Submission are omitted). Empty for an unknown code.
    */

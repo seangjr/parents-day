@@ -37,12 +37,15 @@ export function ProfileForm() {
 
   // Seed the form from the store once it hydrates (returning device / back-nav).
   useEffect(() => {
-    if (ready && !seeded) {
+    if (!ready || seeded) return;
+
+    const timer = window.setTimeout(() => {
       setFirstName(participant.firstName);
       setRole(participant.role);
       setSelfie(participant.selfie);
       setSeeded(true);
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [ready, seeded, participant]);
 
   const nameValid = firstName.trim().length > 0;
@@ -66,23 +69,25 @@ export function ProfileForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-6" noValidate>
-      <Field
-        label="First name"
-        placeholder="e.g. Sarah"
-        value={firstName}
-        onChange={(event) => setFirstName(event.target.value)}
-        hint="Just your first name is enough."
-        error={
-          attempted && !nameValid
-            ? "We need a first name to reveal your style."
-            : undefined
-        }
-        autoComplete="given-name"
-        enterKeyHint="next"
-        maxLength={40}
-      />
+      <div className="motion-enter">
+        <Field
+          label="First name"
+          placeholder="e.g. Sarah"
+          value={firstName}
+          onChange={(event) => setFirstName(event.target.value)}
+          hint="Just your first name is enough."
+          error={
+            attempted && !nameValid
+              ? "We need a first name to reveal your style."
+              : undefined
+          }
+          autoComplete="given-name"
+          enterKeyHint="next"
+          maxLength={40}
+        />
+      </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="motion-enter flex flex-col gap-2" style={{ animationDelay: "45ms" }}>
         <span className="font-condensed text-sm font-bold uppercase tracking-wide text-sage">
           Your role
         </span>
@@ -98,24 +103,26 @@ export function ProfileForm() {
           ))}
         </div>
         {attempted && role === null ? (
-          <p className="text-sm text-peach">Pick the one that fits you best.</p>
+          <p className="motion-enter text-sm text-peach">Pick the one that fits you best.</p>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="motion-enter flex flex-col gap-2" style={{ animationDelay: "90ms" }}>
         <SelfieField value={selfie} onChange={setSelfie} />
         <p className="text-xs text-sage/70">
           Your photo may appear on the family wall if you allow it.
         </p>
       </div>
 
-      <Checkbox
-        checked={consent}
-        onChange={(event) => setConsent(event.target.checked)}
-        label="Show my first name, result, and photo on the event wall."
-      />
+      <div className="motion-enter" style={{ animationDelay: "135ms" }}>
+        <Checkbox
+          checked={consent}
+          onChange={(event) => setConsent(event.target.checked)}
+          label="Show my first name, result, and photo on the event wall."
+        />
+      </div>
 
-      <div className="mt-auto flex flex-col gap-3 pt-2">
+      <div className="motion-enter mt-auto flex flex-col gap-3 pt-2" style={{ animationDelay: "180ms" }}>
         <Button type="submit" className="w-full" disabled={!valid}>
           Continue
         </Button>
