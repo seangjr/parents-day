@@ -1,13 +1,16 @@
 "use client";
 
 /**
- * Participant store — the client-first source of truth for one person on one
- * device (ADR-0001 client-first results, ADR-0002 one Participant per device).
+ * Participant store — the client-first source of truth for one person for one
+ * pass through the experience (ADR-0001 client-first results).
  *
  * Holds an anonymous client-generated id, the profile (first name, role,
- * optional selfie) and the five quiz answers, mirrored to `localStorage` so a
- * reload or a return visit resumes in place. A retake overwrites in place
- * (idempotent) — the id never changes on this device.
+ * optional selfie) and the five quiz answers, mirrored to `sessionStorage` so a
+ * mid-flow reload resumes in place. Scope is deliberately one browser session,
+ * and the landing page clears it (`clearParticipant`), so the next person on
+ * the same device always starts blank with a fresh id — nothing pre-fills and
+ * a new Submission never overwrites the previous person's. A retake within one
+ * session overwrites in place (idempotent) — the id is stable until then.
  */
 
 import {
@@ -26,7 +29,7 @@ import type { Role } from "@/lib/scoring";
 /** Number of forced-choice quiz questions (ADR-0003: five answers A–E). */
 export const QUESTION_COUNT = 5;
 
-/** localStorage key — one Participant per device. */
+/** sessionStorage key — one Participant per pass through the flow. */
 const STORAGE_KEY = "love-revealed:participant";
 
 /** Role chips shown at the profile step; `value` is the logic-bearing Role. */
@@ -82,7 +85,7 @@ export interface ParticipantState extends ParticipantProfile {
 /** The store surface exposed through context. */
 export interface ParticipantStore {
   participant: ParticipantState;
-  /** True once state has been hydrated from localStorage on the client. */
+  /** True once state has been hydrated from sessionStorage on the client. */
   ready: boolean;
   /** First name and role are both set. */
   hasProfile: boolean;
@@ -162,7 +165,7 @@ function coerce(raw: unknown): ParticipantState | null {
 
 function load(): ParticipantState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = coerce(JSON.parse(raw) as unknown);
       if (parsed) return parsed;
@@ -175,21 +178,43 @@ function load(): ParticipantState {
 
 function persist(state: ParticipantState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Quota exceeded or storage disabled — degrade to in-memory only.
   }
 }
 
+/** Drop the persisted Participant so the next hydration starts blank. */
+export function clearParticipant(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage disabled — nothing was persisted anyway.
+  }
+}
+
+/**
+ * Renders nothing; clears the persisted Participant on mount. Mounted on the
+ * landing page so reaching it (a fresh QR scan, or "Done" at the end of the
+ * flow) always hands the next person a blank slate. Mid-flow reloads never
+ * pass through the landing, so resume-in-place is unaffected.
+ */
+export function ParticipantReset(): null {
+  useEffect(() => {
+    clearParticipant();
+  }, []);
+  return null;
+}
+
 const ParticipantContext = createContext<ParticipantStore | null>(null);
 
-/** Owns the participant state; hydrates from and persists to localStorage. */
+/** Owns the participant state; hydrates from and persists to sessionStorage. */
 export function ParticipantProvider({ children }: { children: ReactNode }) {
   const [participant, setParticipant] = useState<ParticipantState>(freshState);
   const [ready, setReady] = useState(false);
 
-  // Hydrate once on mount. The server render has no localStorage, so the first
-  // client render matches it (empty id, not ready) — no hydration mismatch.
+  // Hydrate once on mount. The server render has no sessionStorage, so the
+  // first client render matches it (empty id, not ready) — no hydration mismatch.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setParticipant(load());

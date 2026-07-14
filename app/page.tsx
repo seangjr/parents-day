@@ -5,16 +5,20 @@ import { TransitionLink, TransitionTextLink } from "@/components/transition";
 import { BUTTON_BASE, BUTTON_VARIANTS, ButtonContent } from "@/components/ui/button";
 import { SplitReveal } from "@/components/animation/split-reveal";
 import Link from "next/link";
+import { ParticipantReset } from "@/lib/participant";
 
 /**
  * Welcome (Figma Mobile 1) — the QR landing. Brand lockup + the "Love Revealed"
  * script wordmark, a one-line tagline, then BEGIN into the family-first wizard
- * (Step 1). A returning member with a code jumps straight to Join. Replaces the
- * old design-system landing; the gallery still lives at /design-system.
+ * (Step 1). A returning member with a code jumps straight to Join. Reaching
+ * this page always resets the stored Participant (<ParticipantReset />) so the
+ * next person on a shared device starts blank. Replaces the old design-system
+ * landing; the gallery still lives at /design-system.
  */
 export default function Welcome() {
   return (
     <>
+      <ParticipantReset />
             <script
           dangerouslySetInnerHTML={{
             __html:

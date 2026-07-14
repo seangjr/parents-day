@@ -4,7 +4,7 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { Camera, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/** Cap the stored selfie so the data URL stays small enough for localStorage. */
+/** Cap the stored selfie so the data URL stays small enough for sessionStorage. */
 const MAX_DIMENSION = 512;
 const JPEG_QUALITY = 0.82;
 

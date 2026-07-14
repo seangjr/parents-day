@@ -3,8 +3,8 @@ import { ParticipantProvider } from "@/lib/participant";
 
 /**
  * Shell for the family flow (hub → create/join → mix). The participant store is
- * client-first (localStorage), so wrapping here rehydrates the same Participant
- * this device used in the quiz flow — its id joins families and its name/role
+ * client-first (sessionStorage), so wrapping here rehydrates the same Participant
+ * this session used in the quiz flow — its id joins families and its name/role
  * feed the mix. Mirrors the experience column so the two flows feel continuous.
  */
 export default function FamilyLayout({ children }: { children: ReactNode }) {
