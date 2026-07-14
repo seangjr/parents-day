@@ -8,7 +8,7 @@ describe("scoreQuiz — single top style", () => {
     expect(r.primary).toBe("sayang");
     expect(r.hybridWith).toBeNull();
     expect(r.isRojak).toBe(false);
-    expect(r.display).toBe("Sayang Words");
+    expect(r.display).toBe("Encouraging Words");
     expect(r.counts).toEqual({ sayang: 5, lepak: 0, help: 0, tapau: 0, hug: 0 });
   });
 
@@ -16,7 +16,7 @@ describe("scoreQuiz — single top style", () => {
     const r = scoreQuiz(["A", "A", "A", "A", "B"] satisfies QuizAnswer[]);
     expect(r.primary).toBe("sayang");
     expect(r.hybridWith).toBeNull();
-    expect(r.display).toBe("Sayang Words");
+    expect(r.display).toBe("Encouraging Words");
     expect(r.counts).toEqual({ sayang: 4, lepak: 1, help: 0, tapau: 0, hug: 0 });
   });
 
@@ -25,7 +25,7 @@ describe("scoreQuiz — single top style", () => {
     expect(r.primary).toBe("sayang");
     expect(r.hybridWith).toBeNull();
     expect(r.isRojak).toBe(false);
-    expect(r.display).toBe("Sayang Words");
+    expect(r.display).toBe("Encouraging Words");
   });
 
   test("3-1-1: single top", () => {
@@ -39,7 +39,7 @@ describe("scoreQuiz — single top style", () => {
     const r = scoreQuiz(["A", "A", "B", "C", "D"] satisfies QuizAnswer[]);
     expect(r.primary).toBe("sayang");
     expect(r.hybridWith).toBeNull();
-    expect(r.display).toBe("Sayang Words");
+    expect(r.display).toBe("Encouraging Words");
     expect(r.counts).toEqual({ sayang: 2, lepak: 1, help: 1, tapau: 1, hug: 0 });
   });
 });
@@ -50,7 +50,7 @@ describe("scoreQuiz — two-way tie (2+2+1), earliest-answered wins", () => {
     expect(r.primary).toBe("sayang");
     expect(r.hybridWith).toBe("lepak");
     expect(r.isRojak).toBe(false);
-    expect(r.display).toBe("Sayang Words, with a bit of Lepak Love");
+    expect(r.display).toBe("Encouraging Words, with a bit of Quality Time");
     expect(r.counts).toEqual({ sayang: 2, lepak: 2, help: 1, tapau: 0, hug: 0 });
   });
 
@@ -58,21 +58,21 @@ describe("scoreQuiz — two-way tie (2+2+1), earliest-answered wins", () => {
     const r = scoreQuiz(["B", "A", "B", "A", "C"] satisfies QuizAnswer[]);
     expect(r.primary).toBe("lepak");
     expect(r.hybridWith).toBe("sayang");
-    expect(r.display).toBe("Lepak Love, with a bit of Sayang Words");
+    expect(r.display).toBe("Quality Time, with a bit of Encouraging Words");
   });
 
   test("later-letter styles tie: earliest-answered (C before E) leads", () => {
     const r = scoreQuiz(["C", "E", "C", "E", "A"] satisfies QuizAnswer[]);
     expect(r.primary).toBe("help");
     expect(r.hybridWith).toBe("hug");
-    expect(r.display).toBe("Help-Help Love, with a bit of Warm Hug Love");
+    expect(r.display).toBe("Helpful Actions, with a bit of Warm Touches");
   });
 
   test("hybridWith is the other tied style, not the canonically-first one", () => {
     const r = scoreQuiz(["E", "C", "E", "C", "A"] satisfies QuizAnswer[]);
     expect(r.primary).toBe("hug");
     expect(r.hybridWith).toBe("help");
-    expect(r.display).toBe("Warm Hug Love, with a bit of Help-Help Love");
+    expect(r.display).toBe("Warm Touches, with a bit of Helpful Actions");
   });
 });
 
@@ -104,7 +104,7 @@ describe("familyMix — N=2", () => {
     expect(r.archetype).toBe("twoway");
     expect(r.distinct).toBe(2);
     expect(r.counts).toEqual({ sayang: 1, lepak: 1, help: 0, tapau: 0, hug: 0 });
-    expect(r.headline).toBe("Loves in two ways: Sayang Words and Lepak Love.");
+    expect(r.headline).toBe("Loves in two ways: Encouraging Words and Quality Time.");
     expect(r.dominantStyle).toBeUndefined();
     expect(r.contrast).toBeUndefined();
   });
@@ -116,7 +116,7 @@ describe("familyMix — N=2", () => {
     ] satisfies FamilyMember[]);
     expect(r.archetype).toBe("contrast");
     expect(r.contrast).toEqual({ parents: "sayang", children: "lepak" });
-    expect(r.headline).toBe("Parents lean Sayang Words; children lean Lepak Love.");
+    expect(r.headline).toBe("Parents lean Encouraging Words; children lean Quality Time.");
   });
 
   test("same style → dominant even at N=2", () => {
@@ -127,7 +127,7 @@ describe("familyMix — N=2", () => {
     expect(r.archetype).toBe("dominant");
     expect(r.dominantStyle).toBe("sayang");
     expect(r.distinct).toBe(1);
-    expect(r.headline).toBe("A Sayang Words Family.");
+    expect(r.headline).toBe("An Encouraging Words Family.");
   });
 });
 
@@ -205,7 +205,7 @@ describe("familyMix — N=10", () => {
     ] satisfies FamilyMember[]);
     expect(r.archetype).toBe("twoway");
     expect(r.distinct).toBe(2);
-    expect(r.headline).toBe("Loves in two ways: Sayang Words and Lepak Love.");
+    expect(r.headline).toBe("Loves in two ways: Encouraging Words and Quality Time.");
   });
 });
 

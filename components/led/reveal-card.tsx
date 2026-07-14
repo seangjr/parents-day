@@ -81,7 +81,6 @@ export function RevealCard({
         >
           {displayLabel(meta)}
         </span>
-        <span className="text-sm text-sage">{meta.descriptor}</span>
       </div>
     </div>
   );

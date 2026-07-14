@@ -12,6 +12,7 @@
 import {
   LOVE_STYLES,
   LOVE_STYLE_ORDER,
+  displayLabel,
   styleForAnswer,
   type LoveStyleId,
   type QuizAnswer,
@@ -67,8 +68,9 @@ function emptyCounts(): Record<LoveStyleId, number> {
   return counts;
 }
 
+/** The displayed label for a style id — honors the RESULT_LABEL switch. */
 function nameOf(id: LoveStyleId): string {
-  return LOVE_STYLES[id].name;
+  return displayLabel(LOVE_STYLES[id]);
 }
 
 /**
@@ -150,12 +152,14 @@ export function familyMix(members: FamilyMember[]): FamilyMixResult {
   const leaders = LOVE_STYLE_ORDER.filter((id) => counts[id] === max);
   if (leaders.length === 1 && max > 0 && max >= Math.ceil(n / 2)) {
     const dominantStyle = leaders[0];
+    const label = nameOf(dominantStyle);
     return {
       counts,
       distinct,
       archetype: "dominant",
       dominantStyle,
-      headline: `A ${nameOf(dominantStyle)} Family.`,
+      // "An Encouraging Words Family." vs "A Quality Time Family."
+      headline: `${/^[aeiou]/i.test(label) ? "An" : "A"} ${label} Family.`,
     };
   }
 

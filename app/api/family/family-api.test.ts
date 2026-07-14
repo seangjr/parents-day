@@ -236,7 +236,7 @@ describe("Family API routes", () => {
       expect(mix).not.toBeNull();
       expect(mix!.archetype).toBe("dominant");
       expect(mix!.dominantStyle).toBe("sayang");
-      expect(mix!.headline).toBe("A Sayang Words Family.");
+      expect(mix!.headline).toBe("An Encouraging Words Family.");
 
       const countsSum = Object.values(mix!.counts).reduce(
         (acc: number, n: number) => acc + n,

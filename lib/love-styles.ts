@@ -78,7 +78,7 @@ export const LOVE_STYLES: Record<LoveStyleId, LoveStyleMeta> = {
   hug: {
     id: "hug",
     name: "Warm Hug Love",
-    descriptor: "Warm Affection",
+    descriptor: "Warm Touches",
     answer: "E",
     icon: Heart,
     hex: "#FFDAB9",
@@ -108,10 +108,10 @@ export function styleForAnswer(answer: string): LoveStyleMeta | undefined {
 /**
  * Which label to DISPLAY for a Participant's result across all screens + the LED.
  * "malaysian" = the brand concept (brief / ADR-0003, e.g. "Lepak Love").
- * "descriptor" = the Figma screens' English wording (e.g. "Quality Time").
+ * "descriptor" = the English wording (e.g. "Quality Time").
  * Single switch — flip this one value to change every surface.
  */
-export const RESULT_LABEL: "malaysian" | "descriptor" = "malaysian";
+export const RESULT_LABEL: "malaysian" | "descriptor" = "descriptor";
 
 /** The displayed result label for a Love Style, per RESULT_LABEL. */
 export function displayLabel(style: LoveStyleMeta): string {

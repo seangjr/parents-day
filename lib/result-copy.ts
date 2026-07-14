@@ -17,27 +17,27 @@ export const RESULT_COPY: Record<LoveStyleId, LoveStyleCopy> = {
   sayang: {
     tagline: "You love out loud.",
     description:
-      "Sayang Words is your way — a well-timed “I’m proud of you” from you can carry someone through their whole week.",
+      "Encouraging Words are your way — a well-timed “I’m proud of you” from you can carry someone through their whole week.",
   },
   lepak: {
     tagline: "You love by showing up.",
     description:
-      "Lepak Love is unhurried time together. No agenda, no rush — just being there is your whole heart.",
+      "Quality Time is unhurried togetherness. No agenda, no rush — just being there is your whole heart.",
   },
   help: {
     tagline: "You love with your hands.",
     description:
-      "Help-Help Love spots what needs doing and quietly does it, making life a little lighter for the people you love.",
+      "Helpful Actions spot what needs doing and quietly get it done, making life a little lighter for the people you love.",
   },
   tapau: {
     tagline: "You love in little parcels.",
     description:
-      "Tapau Love is a favourite dish packed home or a small surprise — your way of saying “I was thinking of you.”",
+      "Thoughtful Gifts are a favourite dish packed home or a small surprise — your way of saying “I was thinking of you.”",
   },
   hug: {
     tagline: "You love up close.",
     description:
-      "Warm Hug Love is presence you can feel — a hug at the door, a hand held, sitting shoulder to shoulder.",
+      "Warm Touches are presence you can feel — a hug at the door, a hand held, sitting shoulder to shoulder.",
   },
 };
 

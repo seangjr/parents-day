@@ -1,4 +1,4 @@
-import { LOVE_STYLE_ORDER, LOVE_STYLES, type LoveStyleId } from "@/lib/love-styles";
+import { LOVE_STYLE_ORDER, LOVE_STYLES, displayLabel, type LoveStyleId } from "@/lib/love-styles";
 import { cn } from "@/lib/cn";
 
 interface MixBarProps {
@@ -51,7 +51,7 @@ export function MixBar({ counts, className }: MixBarProps) {
                 <Icon className="size-4" aria-hidden />
               </span>
               <span className="flex-1 font-condensed text-base font-bold uppercase tracking-wide text-cream">
-                {meta.name}
+                {displayLabel(meta)}
               </span>
               <span className="font-condensed text-lg font-bold tabular-nums text-lime">
                 {counts[id]}
