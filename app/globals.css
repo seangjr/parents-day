@@ -57,12 +57,59 @@
   --shadow-glow: 0 0 1.25rem rgb(240 244 166 / 0.2);
 
   /* Motion */
-  --animate-rise: rise 0.6s var(--ease-smooth) both;
+  --animate-rise: rise 0.45s var(--ease-smooth) both;
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(1rem); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; filter: blur(4px); transform: translateY(0.75rem); }
+  to   { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+
+/* Shared one-shot choreography for LED scenes and participant-flow blocks.
+   Delays are set per element with `animation-delay`; reduced motion snaps all
+   three utilities to their final state below. */
+.motion-scene {
+  animation: motion-scene-in 0.3s var(--ease-smooth) both;
+}
+.motion-enter {
+  animation: motion-enter-in 0.24s var(--ease-smooth) both;
+}
+.motion-pop {
+  animation: motion-pop-in 0.22s var(--ease-smooth) both;
+}
+.motion-draw-line {
+  animation: motion-line-in 0.4s var(--ease-smooth) both;
+}
+
+@keyframes motion-scene-in {
+  from { opacity: 0; filter: blur(5px); transform: translateY(0.75rem) scale(0.985); }
+  to   { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+}
+@keyframes motion-enter-in {
+  from { opacity: 0; filter: blur(3px); transform: translateY(0.5rem); }
+  to   { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+@keyframes motion-pop-in {
+  from { opacity: 0; filter: blur(4px); scale: 0.96; }
+  to   { opacity: 1; filter: blur(0); scale: 1; }
+}
+@keyframes motion-line-in {
+  from { opacity: 0; stroke-dashoffset: 1; }
+  to   { opacity: 1; stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .motion-scene,
+  .motion-enter,
+  .motion-pop,
+  .motion-draw-line {
+    animation: none;
+    opacity: 1;
+    filter: none;
+    transform: none;
+    scale: 1;
+  }
 }
 
 /* ----------------------------------------------------------------------------
@@ -124,6 +171,38 @@ body {
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
+}
+
+/* ----------------------------------------------------------------------------
+   Quiz-flow crossfade — Osmo "Cross Fade Page Transition"
+   Within the participant flow (profile → quiz → result → submitted) the
+   provider tags <html> with `.vt-crossfade` for the duration of the View
+   Transition and skips the draw-SVG overlay. These rules re-enable the VT
+   snapshot animations with the resource's timings: the old page fades out
+   (0.5s, ≈power1.in) while the new fades in (0.75s, ≈power1.inOut). The h1
+   rise detail runs on the live DOM via GSAP (transition-provider.tsx).
+   The snapshot backdrop is painted app-black so the 0.5–0.75s tail (old fully
+   faded, new not yet opaque) never flashes the default white canvas. */
+html.vt-crossfade::view-transition {
+  background: var(--color-olive-black);
+}
+html.vt-crossfade::view-transition-old(root) {
+  animation: vt-crossfade-out 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) both;
+}
+html.vt-crossfade::view-transition-new(root) {
+  animation: vt-crossfade-in 0.75s cubic-bezier(0.455, 0.03, 0.515, 0.955) both;
+}
+@keyframes vt-crossfade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-crossfade-in {
+  from { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.vt-crossfade::view-transition-old(root),
+  html.vt-crossfade::view-transition-new(root) {
+    animation: none;
+  }
 }
 
 /* ----------------------------------------------------------------------------
@@ -199,6 +278,10 @@ body {
   letter-spacing: 0.025em;
   text-decoration: none; /* for <a> CTAs sharing the look */
   white-space: nowrap;
+  min-height: 3rem; /* 48px — comfortable thumb target; content stays centered */
+  max-width: 100%;
+  touch-action: manipulation; /* no double-tap-zoom delay on mobile taps */
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
   user-select: none;
   background: transparent;
@@ -209,8 +292,13 @@ body {
   transition: transform 0.5s cubic-bezier(0.35, 1.75, 0.6, 1);
 }
 
-.btn-motion:hover {
-  transform: scale(1.05) rotate(-1deg);
+/* Pointer-hover only where hover exists — on touch, :hover sticks after a tap
+   and would leave the button stuck scaled/wiggling. :active still gives taps
+   their squash feedback. */
+@media (hover: hover) {
+  .btn-motion:hover {
+    transform: scale(1.05) rotate(-1deg);
+  }
 }
 .btn-motion:active {
   transform: scale(0.97) rotate(-1deg);
@@ -312,13 +400,19 @@ body {
 }
 
 /* Body "boils" and the label wiggles while pointer-hovered or keyboard-focused. */
-.btn-motion:hover .btn-motion__body-svg,
 .btn-motion:focus-visible .btn-motion__body-svg {
   animation: btn-sprite 0.45s steps(3, end) infinite;
 }
-.btn-motion:hover .btn-motion__label,
 .btn-motion:focus-visible .btn-motion__label {
   animation: btn-wiggle 0.3s steps(2, end) infinite;
+}
+@media (hover: hover) {
+  .btn-motion:hover .btn-motion__body-svg {
+    animation: btn-sprite 0.45s steps(3, end) infinite;
+  }
+  .btn-motion:hover .btn-motion__label {
+    animation: btn-wiggle 0.3s steps(2, end) infinite;
+  }
 }
 
 /* A disabled button should sit still. */

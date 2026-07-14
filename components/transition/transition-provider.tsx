@@ -29,6 +29,13 @@ import { useLenis } from "lenis/react";
 
    The SVG `<path>` and `data-transition-wrap` attribute are from the resource
    and are DOM-targeted by the animation — do not rename or restructure them.
+
+   Two modes:
+   - Draw-SVG wipe (default): cover -> swap -> reveal, all GSAP.
+   - Crossfade (Osmo "Cross Fade Page Transition"), used BETWEEN quiz-flow
+     routes: no overlay — the VT old/new root snapshots overlap-fade via CSS
+     in globals.css (`html.vt-crossfade`), and the incoming h1 rises in via
+     GSAP on the live DOM (the "new" snapshot is a live capture).
 ---------------------------------------------------------------------------- */
 
 type TransitionContextValue = {
@@ -55,6 +62,15 @@ const TRANSITION_PATH =
 // Safety net: if the route never signals commit (VT skipped, prefetch miss,
 // error boundary, etc.), reveal anyway so the overlay can never stick covering.
 const COMMIT_TIMEOUT_MS = 2000;
+
+// The participant quiz flow — navigation BETWEEN these routes crossfades
+// (Osmo "Cross Fade Page Transition") instead of running the draw-SVG wipe.
+const CROSSFADE_ROUTES: Record<string, true> = {
+  "/profile": true,
+  "/quiz": true,
+  "/result": true,
+  "/submitted": true,
+};
 
 type ViewTransition = { finished: Promise<void>; ready: Promise<void> };
 type DocumentWithVT = Document & {
@@ -136,21 +152,26 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Resolves once the router has committed `target`; shared by both modes.
+  const waitForCommit = useCallback((target: string) => {
+    return new Promise<void>((resolve) => {
+      let done = false;
+      const settle = () => {
+        if (done) return;
+        done = true;
+        if (commitRef.current?.target === target) commitRef.current = null;
+        resolve();
+      };
+      commitRef.current = { target, resolve: settle };
+      // Never let a transition stick if the commit signal is missed.
+      setTimeout(settle, COMMIT_TIMEOUT_MS);
+    });
+  }, []);
+
   // Atomically swap to `href`, resolving once the new route is on screen.
   const swap = useCallback(
     (href: string, target: string) => {
-      const committed = new Promise<void>((resolve) => {
-        let done = false;
-        const settle = () => {
-          if (done) return;
-          done = true;
-          if (commitRef.current?.target === target) commitRef.current = null;
-          resolve();
-        };
-        commitRef.current = { target, resolve: settle };
-        // Never let the overlay stick if the commit signal is missed.
-        setTimeout(settle, COMMIT_TIMEOUT_MS);
-      });
+      const committed = waitForCommit(target);
 
       const doc = document as DocumentWithVT;
       if (typeof doc.startViewTransition === "function") {
@@ -166,7 +187,75 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
       router.push(href);
       return committed;
     },
-    [router]
+    [router, waitForCommit]
+  );
+
+  // The Osmo crossfade's detail touch: the incoming page's h1 rises in.
+  // Timings from the resource: yPercent 25 -> 0, expo.out, 1s, 0.3s into
+  // the enter fade.
+  const playHeadingRise = useCallback(() => {
+    const heading = document.querySelector<HTMLElement>("[data-page-root] h1");
+    if (!heading) return;
+    gsap.fromTo(
+      heading,
+      { autoAlpha: 0, yPercent: 25 },
+      { autoAlpha: 1, yPercent: 0, ease: "expo.out", duration: 1, delay: 0.3 }
+    );
+  }, []);
+
+  // Osmo "Cross Fade" — quiz-flow route swaps. With View Transitions the old
+  // and new root snapshots overlap-fade (CSS in globals.css: out 0.5s while
+  // in 0.75s); without VT support the App Router can't keep both pages
+  // mounted, so the same fades run sequentially on the live page column.
+  const crossfadeSwap = useCallback(
+    async (href: string, target: string) => {
+      const committed = waitForCommit(target);
+
+      const doc = document as DocumentWithVT;
+      if (typeof doc.startViewTransition === "function") {
+        document.documentElement.classList.add("vt-crossfade");
+        try {
+          const vt = doc.startViewTransition(async () => {
+            router.push(href);
+            await committed;
+            // Rendering is suppressed inside the update callback — reset
+            // scroll and stage the h1 before the new snapshot is captured.
+            lenis?.scrollTo(0, { immediate: true });
+            playHeadingRise();
+          });
+          await vt.finished.catch(() => {});
+          await committed;
+        } finally {
+          document.documentElement.classList.remove("vt-crossfade");
+        }
+        return;
+      }
+
+      const page = document.querySelector<HTMLElement>("[data-page-root] main");
+      if (page) {
+        await gsap.to(page, { autoAlpha: 0, ease: "power1.in", duration: 0.5 });
+      }
+      router.push(href);
+      await committed;
+      lenis?.scrollTo(0, { immediate: true });
+      const nextPage = document.querySelector<HTMLElement>(
+        "[data-page-root] main"
+      );
+      if (nextPage) {
+        gsap.fromTo(
+          nextPage,
+          { autoAlpha: 0 },
+          {
+            autoAlpha: 1,
+            ease: "power1.inOut",
+            duration: 0.75,
+            clearProps: "opacity,visibility",
+          }
+        );
+      }
+      playHeadingRise();
+    },
+    [lenis, playHeadingRise, router, waitForCommit]
   );
 
   const navigate = useCallback(
@@ -194,6 +283,15 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        // Inside the quiz flow, pages crossfade; everything else wipes.
+        if (
+          CROSSFADE_ROUTES[window.location.pathname] &&
+          CROSSFADE_ROUTES[target]
+        ) {
+          await crossfadeSwap(href, target);
+          return;
+        }
+
         await playCover();
         await swap(href, target);
         lenis?.scrollTo(0, { immediate: true });
@@ -202,7 +300,7 @@ export function TransitionProvider({ children }: { children: ReactNode }) {
         animatingRef.current = false;
       }
     },
-    [lenis, playCover, playReveal, swap, router]
+    [lenis, playCover, playReveal, swap, crossfadeSwap, router]
   );
 
   // App-wide: intercept clicks on internal links so every navigation runs the

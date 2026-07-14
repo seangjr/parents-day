@@ -2,7 +2,9 @@ import { type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { BUTTON_BODY_SPRITE, BUTTON_SPARKLE_SPRITE } from "@/lib/button-sprites";
 
-export type ButtonVariant = "primary" | "ghost";
+type MotionButtonVariant = "primary" | "ghost";
+type StaticButtonVariant = "surface" | "text" | "danger";
+export type ButtonVariant = MotionButtonVariant | StaticButtonVariant;
 
 /**
  * Container classes for a stop-motion button. Exported so link-styled CTAs can
@@ -11,9 +13,21 @@ export type ButtonVariant = "primary" | "ghost";
  */
 export const BUTTON_BASE = "btn-motion";
 
-export const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
+export const BUTTON_VARIANTS: Record<MotionButtonVariant, string> = {
   primary: "btn-motion--primary",
   ghost: "btn-motion--ghost",
+};
+
+const STATIC_BUTTON_BASE =
+  "inline-flex min-h-11 max-w-full touch-manipulation items-center justify-center gap-2 font-medium transition-[color,background-color,border-color,transform] duration-300 ease-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-olive-black active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40";
+
+const STATIC_BUTTON_VARIANTS: Record<StaticButtonVariant, string> = {
+  surface:
+    "rounded-card border border-sage/30 bg-shadow/40 px-4 py-3 text-cream hover:border-sage/60 hover:bg-moss/20",
+  text:
+    "rounded-xs px-1 text-sm text-lime underline underline-offset-4 hover:text-cream",
+  danger:
+    "rounded-xs px-1 text-sm text-peach underline underline-offset-4 hover:text-peach/70",
 };
 
 interface ButtonContentProps {
@@ -70,13 +84,23 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
+  const motion =
+    variant === "primary" || variant === "ghost";
+  const variantClass = motion
+    ? cn(BUTTON_BASE, BUTTON_VARIANTS[variant])
+    : cn(STATIC_BUTTON_BASE, STATIC_BUTTON_VARIANTS[variant]);
+
   return (
     <button
       type={type}
-      className={cn(BUTTON_BASE, BUTTON_VARIANTS[variant], className)}
+      className={cn(variantClass, className)}
       {...props}
     >
-      <ButtonContent sparkle={sparkle}>{children}</ButtonContent>
+      {motion ? (
+        <ButtonContent sparkle={sparkle}>{children}</ButtonContent>
+      ) : (
+        children
+      )}
     </button>
   );
 }

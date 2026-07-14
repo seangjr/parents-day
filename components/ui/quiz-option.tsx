@@ -23,7 +23,7 @@ export function QuizOption({
       type={type}
       aria-pressed={selected}
       className={cn(
-        "group flex w-full items-center gap-4 rounded-card border p-5 text-left transition-all duration-300 ease-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-olive-black",
+        "group flex w-full touch-manipulation items-center gap-4 rounded-card border p-5 text-left transition-[border-color,background-color,box-shadow,scale] duration-200 ease-smooth motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-olive-black",
         selected
           ? "border-lime bg-moss/40 shadow-glow"
           : "border-sage/25 bg-shadow/40 hover:border-sage/60 hover:bg-moss/20",
@@ -34,7 +34,7 @@ export function QuizOption({
       {letter ? (
         <span
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-xs font-condensed text-lg font-bold transition-colors duration-300 ease-smooth",
+            "flex size-10 shrink-0 items-center justify-center rounded-xs font-condensed text-lg font-bold transition-colors duration-200 ease-smooth motion-reduce:transition-none",
             selected
               ? "bg-lime text-olive-black"
               : "bg-moss/50 text-sage group-hover:text-cream",
