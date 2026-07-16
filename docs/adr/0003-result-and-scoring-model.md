@@ -26,7 +26,7 @@ Five forced-choice questions map to five Love Styles (answers A–E). With only 
 ### Family Archetype (headline over the mix) — first match wins
 
 1. **Dominant Family** — one style holds the strict max *and* ≥ half the members → "The {Name} Family is a {X} Family."
-2. **Parent-Child Contrast** — ≥1 parent-figure *and* ≥1 child, and the groups' dominant styles differ → "Parents lean {X}; children lean {Y}." (Group-dominant ties broken by earliest-joined member.)
+2. **Parent-Child Contrast** — ≥1 parent-figure *and* ≥1 child, and the groups' dominant styles differ → "Parents lean towards {X}; children lean towards {Y}." (Group-dominant ties broken by earliest-joined member.)
 3. **Rojak Love Family** — ≥3 distinct styles present → "A Rojak Love Family."
 4. **Two-Way (fallback)** — exactly two styles, tied → "loves in two ways: {X} and {Y}."
 

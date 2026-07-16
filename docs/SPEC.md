@@ -60,7 +60,7 @@ afterward.
 
 ### Admin / operator
 26. As an operator, I want to start and stop the experience, so that it only runs during the event.
-27. As an operator, I want to set the LED mode (welcome / live / photo-moment / paused), so that I can drive the room.
+27. As an operator, I want to set the LED mode (welcome / live / photo-moment / love-mix / paused), so that I can drive the room.
 28. As an operator, I want to force a specific reveal or trigger a Photo Moment, so that I can time it to the programme.
 29. As an operator, I want to view submissions and families with live counts, so that I can monitor participation.
 30. As an operator, I want to remove any name or photo, so that I have a safety valve.

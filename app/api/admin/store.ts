@@ -23,8 +23,8 @@ const MODE_KEY = "led:mode";
 const RUNNING_KEY = "admin:running";
 const REMOVED_KEY = "admin:removed";
 
-/** The four coarse modes an operator can set (ADR-0004). */
-export const ADMIN_MODES = ["welcome", "live", "photo-moment", "paused"] as const;
+/** The five coarse modes an operator can set (ADR-0004). */
+export const ADMIN_MODES = ["welcome", "live", "photo-moment", "love-mix", "paused"] as const;
 
 /** Default when unset — "live" so the LED never waits on a flag (matches led-state). */
 const DEFAULT_MODE: AdminMode = "live";
@@ -76,7 +76,7 @@ export async function readAdminState(): Promise<AdminCoarseState> {
   };
 }
 
-/** Set the coarse LED mode (welcome / live / photo-moment / paused). */
+/** Set the coarse LED mode (welcome / live / photo-moment / love-mix / paused). */
 export async function setMode(mode: AdminMode): Promise<void> {
   const client = redis();
   if (!client) {

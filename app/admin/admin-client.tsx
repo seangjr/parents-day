@@ -18,6 +18,7 @@ const MODES: { id: AdminMode; label: string; hint: string }[] = [
   { id: "welcome", label: "Welcome", hint: "Idle join QR" },
   { id: "live", label: "Live", hint: "Family rotation + reveals" },
   { id: "photo-moment", label: "Photo Moment", hint: "Spotlight biggest family" },
+  { id: "love-mix", label: "Love Mix", hint: "Today's Love Mix totals" },
   { id: "paused", label: "Paused", hint: "Hold the wall" },
 ];
 
@@ -138,7 +139,7 @@ export function AdminConsole() {
 
       <section className="flex flex-col gap-4">
         <SectionHeading number={1} title="LED mode" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {MODES.map((m) => {
             const active = state.mode === m.id;
             const unavailable =

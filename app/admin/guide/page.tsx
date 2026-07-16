@@ -105,6 +105,10 @@ export default function StaffGuidePage() {
           <Mode name="Photo Moment">
             Spotlights the biggest family full-screen — great for a group photo.
           </Mode>
+          <Mode name="Love Mix">
+            Holds “Today’s Love Mix” — the room’s live love-language totals —
+            until you switch back to Live.
+          </Mode>
           <Mode name="Paused">
             Freezes the Wall on the current screen — use during an announcement.
           </Mode>

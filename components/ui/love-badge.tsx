@@ -1,20 +1,13 @@
 import { LOVE_STYLES, displayLabel, type LoveStyleId } from "@/lib/love-styles";
 import { cn } from "@/lib/cn";
-import { Pill } from "./pill";
 
 interface LoveBadgeProps {
   styleId: LoveStyleId;
   className?: string;
-  /** Show the Malaysian brand-name pill under the display label. */
-  showDescriptor?: boolean;
 }
 
-/** Icon frame + display label + brand-name pill for a Love Style, driven by LOVE_STYLES. */
-export function LoveBadge({
-  styleId,
-  className,
-  showDescriptor = true,
-}: LoveBadgeProps) {
+/** Icon frame + display label for a Love Style, driven by LOVE_STYLES. */
+export function LoveBadge({ styleId, className }: LoveBadgeProps) {
   const meta = LOVE_STYLES[styleId];
   const Icon = meta.icon;
 
@@ -30,12 +23,9 @@ export function LoveBadge({
       >
         <Icon className="size-7" aria-hidden />
       </span>
-      <div className="flex flex-col items-start gap-1">
-        <span className="font-condensed text-xl font-bold uppercase tracking-wide text-cream">
-          {displayLabel(meta)}
-        </span>
-        {showDescriptor ? <Pill tint={meta.hex}>{meta.name}</Pill> : null}
-      </div>
+      <span className="font-condensed text-xl font-bold uppercase tracking-wide text-cream">
+        {displayLabel(meta)}
+      </span>
     </div>
   );
 }

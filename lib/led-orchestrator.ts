@@ -6,7 +6,7 @@
  * brain, factored out as a pure function of (state, event) → { state, directive }
  * so it can be unit-tested exhaustively without a wall clock or a browser.
  *
- * Redis holds the coarse admin **mode** (welcome / live / photo-moment / paused);
+ * Redis holds the coarse admin **mode** (welcome / live / photo-moment / love-mix / paused);
  * the reducer maps that plus the submission queue, live aggregates, and family
  * snapshots onto one **directive** — the LED screen to show right now, keyed to
  * the Figma LED layouts:
@@ -66,7 +66,7 @@ export const LED_TIMING = {
 // ---------------------------------------------------------------------------
 
 /** Coarse admin-set mode held in Redis (ADR-0004). */
-export type AdminMode = "welcome" | "live" | "photo-moment" | "paused";
+export type AdminMode = "welcome" | "live" | "photo-moment" | "love-mix" | "paused";
 
 /** The LED screen a directive selects. */
 export type LedMode =
@@ -173,6 +173,8 @@ interface Segment {
  * state and never mutates the input.
  */
 export interface OrchestratorState {
+  /** False until the first poll baselines pre-existing event data (no boot replay). */
+  bootstrapped: boolean;
   adminMode: AdminMode;
   aggregates: Aggregates;
   /** Participants currently joined to a Family, including pending Quiz results. */
@@ -225,6 +227,7 @@ function zeroCounts(): Record<LoveStyleId, number> {
 /** A fresh orchestrator state; boots on the Welcome/idle screen. */
 export function initialLedState(now: number): OrchestratorState {
   return {
+    bootstrapped: false,
     adminMode: "live",
     aggregates: { counts: zeroCounts(), total: 0 },
     joinedTotal: 0,
@@ -344,6 +347,23 @@ function ingestPoll(
     familyByCode: Object.fromEntries(data.families.map((f) => [f.code, f])),
   };
 
+  // First poll after a (re)boot is a baseline sync: pre-existing submissions
+  // and family sizes are adopted as already shown, never replayed. A kiosk
+  // reload mid-event resumes the ambient wall instead of churning through the
+  // whole history as a chain of reveals and family mixes.
+  if (!state.bootstrapped) {
+    next.bootstrapped = true;
+    if (data.newSubmissions.length > 0) {
+      const ids = new Set(state.revealedIds);
+      for (const s of data.newSubmissions) ids.add(s.participantId);
+      next.revealedIds = ids;
+    }
+    const seen: Record<string, number> = {};
+    for (const family of data.families) seen[family.code] = family.members.length;
+    next.familySeen = seen;
+    return next;
+  }
+
   // Enqueue genuinely-new individual reveals — never a participant already
   // revealed (idempotent retakes never re-enqueue) or already queued.
   if (data.newSubmissions.length > 0) {
@@ -404,6 +424,9 @@ function chooseSegment(state: OrchestratorState, now: number): Choice {
         ? { kind: "start", mode: "cluster-wall", target: ambientFamily }
         : { kind: "start", mode: "welcome", target: null };
     }
+    case "love-mix":
+      // Operator-forced "Today's Love Mix" — hold the community dashboard.
+      return { kind: "start", mode: "stats", target: null };
     case "live":
       break;
   }

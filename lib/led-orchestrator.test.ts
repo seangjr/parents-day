@@ -78,6 +78,14 @@ function tick(state: OrchestratorState, now: number) {
   return reduceLed(state, { type: "tick", now });
 }
 
+/**
+ * A booted state: the first (baseline) poll consumed with no pre-existing
+ * data, so subsequent polls carry genuinely-new activity (reveals fire).
+ */
+function boot(): OrchestratorState {
+  return poll(initialLedState(0), 0, {}).state;
+}
+
 // ---------------------------------------------------------------------------
 // Boot + base
 // ---------------------------------------------------------------------------
@@ -132,6 +140,44 @@ describe("boot + base modes", () => {
     const { directive } = poll(initialLedState(0), 0, { aggregates: aggregates(3) });
     expect(directive.mode).toBe("welcome");
   });
+
+  test("a reload mid-event baselines history instead of replaying it", () => {
+    // The kiosk reboots mid-event: the first poll carries the WHOLE log and
+    // grown families. Nothing replays — the wall resumes the ambient rotation.
+    const { state, directive } = poll(initialLedState(0), 0, {
+      newSubmissions: [sub("A"), sub("B"), sub("C")],
+      families: [
+        family("TAN", [{ firstName: "Sarah" }, { firstName: "Daniel" }]),
+        family("LEE", [{ firstName: "Aaron" }, { firstName: "Rachel" }]),
+      ],
+      aggregates: aggregates(4),
+    });
+    expect(directive.mode).toBe("cluster-wall");
+    expect(state.queue).toHaveLength(0);
+    expect(state.familyRevealQueue).toHaveLength(0);
+    expect(state.revealedIds.has("A")).toBe(true);
+    expect(state.familySeen.TAN).toBe(2);
+  });
+
+  test("activity arriving after the baseline still reveals", () => {
+    const baselined = poll(initialLedState(0), 0, {
+      newSubmissions: [sub("A")],
+      families: [family("TAN", [{ firstName: "Sarah" }])],
+      aggregates: aggregates(1),
+    }).state;
+
+    // A genuinely-new submission grows TAN to two members: the family reveal
+    // wins; the individual reveal stays queued for its turn.
+    const { state, directive } = poll(baselined, 1000, {
+      newSubmissions: [sub("B")],
+      families: [family("TAN", [{ firstName: "Sarah" }, { firstName: "Daniel" }])],
+      aggregates: aggregates(2),
+    });
+    expect(directive.mode).toBe("family-mix");
+    if (directive.mode !== "family-mix") throw new Error("unreachable");
+    expect(directive.payload.family.code).toBe("TAN");
+    expect(state.queue.map((q) => q.participantId)).toEqual(["B"]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -140,7 +186,7 @@ describe("boot + base modes", () => {
 
 describe("individual reveals + cadence", () => {
   test("reveals a queued submission and dequeues it", () => {
-    const { state, directive } = poll(initialLedState(0), 0, {
+    const { state, directive } = poll(boot(), 0, {
       newSubmissions: [sub("A")],
       aggregates: aggregates(1),
     });
@@ -152,7 +198,7 @@ describe("individual reveals + cadence", () => {
   });
 
   test("holds one reveal, then paces the next by ~revealInterval", () => {
-    let s = poll(initialLedState(0), 0, {
+    let s = poll(boot(), 0, {
       newSubmissions: [sub("A"), sub("B")],
       aggregates: aggregates(2),
     }).state; // reveals A at t=0, B queued
@@ -173,7 +219,7 @@ describe("individual reveals + cadence", () => {
   });
 
   test("returns to base after the reveal hold with an empty queue", () => {
-    const s = poll(initialLedState(0), 0, {
+    const s = poll(boot(), 0, {
       newSubmissions: [sub("A")],
       aggregates: aggregates(1),
     }).state;
@@ -184,7 +230,7 @@ describe("individual reveals + cadence", () => {
   test("cuts to the dashboard after ~N reveals", () => {
     const n = LED_TIMING.dashboardAfterReveals; // 7
     const subs = Array.from({ length: n + 1 }, (_, i) => sub(`A${i}`));
-    let s = poll(initialLedState(0), 0, {
+    let s = poll(boot(), 0, {
       newSubmissions: subs,
       aggregates: aggregates(n + 1),
     }).state; // A0 revealed at t=0
@@ -214,7 +260,7 @@ describe("individual reveals + cadence", () => {
 
 describe("family reveals", () => {
   test("a family reaching two members reveals, beating a queued individual", () => {
-    const { state, directive } = poll(initialLedState(0), 0, {
+    const { state, directive } = poll(boot(), 0, {
       newSubmissions: [sub("X")],
       families: [family("TAN", [{ firstName: "Sarah" }, { firstName: "Daniel" }])],
       aggregates: aggregates(3),
@@ -232,7 +278,7 @@ describe("family reveals", () => {
   test("re-reveal is throttled, then fires again after the window", () => {
     const tan2 = [{ firstName: "Sarah" }, { firstName: "Daniel" }];
     // First reveal at t=0.
-    let s = poll(initialLedState(0), 0, {
+    let s = poll(boot(), 0, {
       families: [family("TAN", tan2)],
       aggregates: aggregates(2),
     }).state;
@@ -256,7 +302,7 @@ describe("family reveals", () => {
 
   test("coalesces growth arriving while another segment holds", () => {
     // An individual reveal is on screen (holds the wall).
-    let s = poll(initialLedState(0), 0, {
+    let s = poll(boot(), 0, {
       newSubmissions: [sub("X")],
       aggregates: aggregates(1),
     }).state;
@@ -290,7 +336,7 @@ describe("flood / montage", () => {
   test("a backlog over the threshold switches to a montage burst", () => {
     const count = LED_TIMING.floodThreshold + 1; // 16
     const subs = Array.from({ length: count }, (_, i) => sub(`P${i}`));
-    const { state, directive } = poll(initialLedState(0), 0, {
+    const { state, directive } = poll(boot(), 0, {
       newSubmissions: subs,
       aggregates: aggregates(count),
     });
@@ -306,7 +352,7 @@ describe("flood / montage", () => {
   test("favours the dashboard once the burst clears", () => {
     const count = LED_TIMING.floodThreshold + 1;
     const subs = Array.from({ length: count }, (_, i) => sub(`P${i}`));
-    const s = poll(initialLedState(0), 0, {
+    const s = poll(boot(), 0, {
       newSubmissions: subs,
       aggregates: aggregates(count),
     }).state;
@@ -336,7 +382,7 @@ describe("idle", () => {
 describe("admin-forced modes", () => {
   test("paused freezes an in-progress reveal instead of dropping to Welcome", () => {
     // A live individual reveal is on screen (A).
-    const started = poll(initialLedState(0), 0, {
+    const started = poll(boot(), 0, {
       newSubmissions: [sub("A")],
       aggregates: aggregates(1),
     });
@@ -403,6 +449,29 @@ describe("admin-forced modes", () => {
     if (directive.mode !== "cluster-wall") throw new Error("unreachable");
     expect(directive.payload.featuredFamilyCode).toBe("TAN");
   });
+
+  test("love-mix forces the community dashboard over reveals and families", () => {
+    const { directive } = poll(initialLedState(0), 0, {
+      mode: "love-mix",
+      newSubmissions: [sub("A")],
+      families: [family("TAN", [{ firstName: "S" }, { firstName: "D" }])],
+      aggregates: aggregates(3),
+    });
+    expect(directive.mode).toBe("stats");
+  });
+
+  test("love-mix holds a stable stats segment across ticks (no re-key churn)", () => {
+    const started = poll(initialLedState(0), 0, {
+      mode: "love-mix",
+      aggregates: aggregates(2),
+      families: [family("TAN", [{ firstName: "S" }])],
+    });
+    expect(started.directive.mode).toBe("stats");
+
+    const later = tick(started.state, LED_TIMING.dashboardHold * 3);
+    expect(later.directive.mode).toBe("stats");
+    expect(later.directive.key).toBe(started.directive.key);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -411,7 +480,7 @@ describe("admin-forced modes", () => {
 
 describe("purity + retakes", () => {
   test("is deterministic and does not mutate the input state", () => {
-    const s = poll(initialLedState(0), 0, {
+    const s = poll(boot(), 0, {
       newSubmissions: [sub("A"), sub("B")],
       aggregates: aggregates(2),
     }).state;
@@ -431,7 +500,7 @@ describe("purity + retakes", () => {
   });
 
   test("an already-revealed participant is never re-enqueued", () => {
-    let s = poll(initialLedState(0), 0, {
+    let s = poll(boot(), 0, {
       newSubmissions: [sub("A")],
       aggregates: aggregates(1),
     }).state; // A revealed
@@ -443,7 +512,7 @@ describe("purity + retakes", () => {
   });
 
   test("deduplicates repeated ids within a single batch", () => {
-    const s = poll(initialLedState(0), 0, {
+    const s = poll(boot(), 0, {
       newSubmissions: [sub("A"), sub("A"), sub("B")],
       aggregates: aggregates(2),
     }).state; // A revealed immediately, only one A + one B ever queued

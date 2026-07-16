@@ -116,7 +116,7 @@ describe("familyMix — N=2", () => {
     ] satisfies FamilyMember[]);
     expect(r.archetype).toBe("contrast");
     expect(r.contrast).toEqual({ parents: "sayang", children: "lepak" });
-    expect(r.headline).toBe("Parents lean Encouraging Words; children lean Quality Time.");
+    expect(r.headline).toBe("Parents lean towards Encouraging Words; children lean towards Quality Time.");
   });
 
   test("same style → dominant even at N=2", () => {

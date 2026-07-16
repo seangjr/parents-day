@@ -178,7 +178,7 @@ export function familyMix(members: FamilyMember[]): FamilyMixResult {
       distinct,
       archetype: "contrast",
       contrast: { parents: parentsDom, children: childrenDom },
-      headline: `Parents lean ${nameOf(parentsDom)}; children lean ${nameOf(childrenDom)}.`,
+      headline: `Parents lean towards ${nameOf(parentsDom)}; children lean towards ${nameOf(childrenDom)}.`,
     };
   }
 

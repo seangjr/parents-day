@@ -292,26 +292,28 @@ function Body({ directive }: { directive: LedDirective }) {
 
     case "stats":
       return (
-        <div className="absolute left-[7%] top-1/2 flex w-[34rem] -translate-y-1/2 flex-col gap-8 rounded-[2rem] border border-lime/25 bg-shadow/80 p-12 backdrop-blur-xl">
-          <SplitReveal as="p" className="font-display text-6xl leading-none text-lime">Today&apos;s Love Mix</SplitReveal>
-          <CommunityDashboard counts={directive.payload.counts} />
-          <div
-            className="motion-enter flex flex-col gap-3 border-t border-lime/25 pt-4"
-            style={{ animationDelay: "220ms" }}
-          >
-            <span className="flex items-baseline gap-3">
-              <Odometer
-                value={directive.payload.total}
-                className="font-condensed text-3xl font-bold text-lime"
-              />
-              <span className="font-condensed text-lg font-bold uppercase tracking-wide text-lime">
-                people joined
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex w-[40rem] max-w-[86vw] flex-col gap-7 rounded-[2rem] border border-lime/25 bg-shadow/80 p-10 backdrop-blur-xl">
+            <SplitReveal as="p" className="text-center font-display text-6xl leading-none text-lime">Today&apos;s Love Mix</SplitReveal>
+            <CommunityDashboard counts={directive.payload.counts} />
+            <div
+              className="motion-enter flex flex-wrap items-baseline justify-center gap-x-10 gap-y-2 border-t border-lime/25 pt-5"
+              style={{ animationDelay: "220ms" }}
+            >
+              <span className="flex items-baseline gap-3">
+                <Odometer
+                  value={directive.payload.total}
+                  className="font-condensed text-3xl font-bold text-lime"
+                />
+                <span className="font-condensed text-lg font-bold uppercase tracking-wide text-lime">
+                  people joined
+                </span>
               </span>
-            </span>
-            <span className="flex items-baseline gap-2 font-condensed text-lg font-medium uppercase tracking-wide text-sage">
-              <Odometer value={directive.payload.familyCount} />
-              <span>families connected</span>
-            </span>
+              <span className="flex items-baseline gap-2 font-condensed text-lg font-medium uppercase tracking-wide text-sage">
+                <Odometer value={directive.payload.familyCount} />
+                <span>families connected</span>
+              </span>
+            </div>
           </div>
         </div>
       );

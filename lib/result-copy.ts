@@ -45,5 +45,5 @@ export const RESULT_COPY: Record<LoveStyleId, LoveStyleCopy> = {
 export const ROJAK_COPY: LoveStyleCopy = {
   tagline: "You love in every way.",
   description:
-    "Rojak Love — a little sayang, a little lepak, a little of everything, mixed together like the best rojak.",
+    "Rojak Love — a little of every love language: words, time, help, gifts and hugs, mixed together like the best rojak.",
 };

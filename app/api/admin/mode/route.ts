@@ -2,9 +2,10 @@ import { isAdminMode, setMode } from "../store";
 
 /**
  * POST /api/admin/mode { mode } — set the coarse LED mode (ADR-0004): welcome /
- * live / photo-moment / paused. This is the operator's LED lever: `photo-moment`
- * triggers a Photo Moment (the LED spotlights the largest family), `live` forces
- * the reveal cadence to resume, `welcome` / `paused` hold the wall on idle.
+ * live / photo-moment / love-mix / paused. This is the operator's LED lever:
+ * `photo-moment` triggers a Photo Moment (the LED spotlights the largest family),
+ * `love-mix` holds the "Today's Love Mix" community dashboard, `live` forces the
+ * reveal cadence to resume, `welcome` / `paused` hold the wall on idle.
  * Gated by proxy.ts (ADR-0006). Live control, never cached.
  */
 export const dynamic = "force-dynamic";

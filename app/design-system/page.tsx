@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import {
   LOVE_STYLE_LIST,
   LOVE_STYLE_ORDER,
+  displayLabel,
   type LoveStyleId,
 } from "@/lib/love-styles";
 import { FitText } from "@/components/fit-text";
@@ -298,8 +299,7 @@ export default function DesignSystemPage() {
                   selected={answer === meta.answer}
                   onClick={() => setAnswer(meta.answer)}
                 >
-                  {meta.name}
-                  <span className="text-sage"> — {meta.descriptor}</span>
+                  {displayLabel(meta)}
                 </QuizOption>
               ))}
             </div>
@@ -377,7 +377,7 @@ export default function DesignSystemPage() {
               reveal="lines"
               className="font-condensed text-2xl font-bold uppercase tracking-wide text-cream"
             >
-              Sayang words
+              Encouraging words
               <br />
               carry far
             </SplitReveal>
@@ -388,7 +388,7 @@ export default function DesignSystemPage() {
               reveal="words"
               className="font-condensed text-2xl font-bold uppercase tracking-wide text-cream"
             >
-              Lepak love is quality time
+              Quality time is unhurried love
             </SplitReveal>
           </Panel>
           <Panel key={`chars-${replay}`}>
